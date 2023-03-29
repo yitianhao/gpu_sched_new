@@ -56,6 +56,8 @@ def main():
         model = models[i]
         model_name = model['model_name']
         # logging 
+        logfilename = f"{model['output_file_path']}/{model['output_file_name']}.log"
+        os.makedirs(os.path.dirname(logfilename), exist_ok=True)
         logfile = open(f"{model['output_file_path']}/{model['output_file_name']}.log", "w") 
         log_files.append(logfile)
         # hooks configuration
