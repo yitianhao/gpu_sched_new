@@ -1,32 +1,97 @@
-## To Run the 2x Experiment 
-1. Compile and run `expcontorller` once under `gpu-sched/pytcppexp/` to delete stale boost files and create new SharedMemory, Mutex, and conditional variable files.\
+## To Setup the gpu sharing experiment 
+0. You have already setup conda environment and replace transform.py file in torchvision with `gpu-core-exps/transform.py`. The path of the file that should be replaced is under `/home/USERNAME/miniconda3/envs/torch/lib/python3.9/site-packages/torchvision/models/detection/transform.py`
+
+1. Make sure under `/dev/shm/`, `MySharedMemory3, named_cnd3, sem.named_mutex3` does not exist or owned by you. If they exist and not own by you, delete them using root privilage.
+
+2. Compile `expcontorller` under `gpu-core-exps/gpu-sched-exp/pytcppexp`. This module provides initialization script of SharedMemory, Mutex, and conditional variable files. `libgeek.so` will also be built. It is a dynamic library that will be used by PyTorch process to modfiy SharedMemroy.\
+`./make.sh`
+
+3. Compile hooks library under `gpu-core-exps/gpu-sched-exp/intercept-lib/`\
 `./make.sh`\
-`./expcontorller`\
-It does not matter is the expcontorller is running after it has been exectuted once before the experiment.\
-2. Make sure the three boost files are fresh.\ 
-`ls -lt /dev/shm/named_cnd3`\
-`ls -lt /dev/shm/MySharedMemory3`\
-`ls -lt /dev/shm/sem.named_mutex3`\
-3. Configure control or no control under `gpu-sched/intercept-lib/`\
-With controller: `CXXFLAGS += -fPIC -O3 -D_RECORD_UTIL -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK`\
-Without controller: `CXXFLAGS += -fPIC -O3 -D_RECORD_UTIL -D_DYN_ADJUST_FR`\
-Compile: `./make.sh`\
-4. Under `gpu-sched/gpu-tester/`, run the experiment with FastRCNN and DeepLab sharing the GPU.
-`./run_test.sh`\
-## To Run the 2x Experiment with NSight supports
-1. Compile and run `expcontorller` once under `gpu-sched/pytcppexp/` to delete stale boost files and create new SharedMemory, Mutex, and conditional variable files.\
-`./make.sh`\
-`./expcontorller`\
-It does not matter is the expcontorller is running after it has been exectuted once before the experiment.\
-2. Make sure the three boost files are fresh.\ 
-`ls -lt /dev/shm/named_cnd3`\
-`ls -lt /dev/shm/MySharedMemory3`\
-`ls -lt /dev/shm/sem.named_mutex3`\
-3. Configure control or no control under `gpu-sched/intercept-lib/`\
-With controller: `CXXFLAGS += -fPIC -O3 -D_RECORD_UTIL -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK`\
-Without controller: `CXXFLAGS += -fPIC -O3 -D_RECORD_UTIL -D_DYN_ADJUST_FR`\
-Compile: `./make.sh`\
-4. Under `gpu-sched/gpu-tester/`, run the experiment with FastRCNN and DeepLab sharing the GPU.
+This command will create three versions of hooks library: controller, controller + sync, and controller + event group.
+
+
+## To configure the gpu sharing experiment 
+```json
+{
+	"models": [
+		{
+			"model_name": "fasterrcnn_resnet50_fpn",
+			"model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+			"sleep_time": 0,
+			"input_file_path": "../data-set/rene/0000000099.png",
+			"output_file_path": "./logs",
+			"output_file_name": "model_A",
+			"priority": 0,
+			"resize": true,
+			"resize_size": [1440, 2560],
+			"control": {
+				"control": true,
+				"controlsync": true,
+				"controlEvent": false,
+				"queue_limit": {
+					"sync": 1,
+					"event_group": 2
+				}
+			}
+		},
+		{
+			"model_name": "fasterrcnn_resnet50_fpn",
+			"model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+			"sleep_time": 1,
+			"input_file_path": "../data-set/rene/0000000099.png",
+			"output_file_path": "./logs",
+			"output_file_name": "model_B",
+			"priority": 1,
+			"resize": false,
+			"resize_size": [720, 1280],
+			"control": {
+				"control": true,
+				"controlsync": false,
+				"controlEvent": false,
+				"queue_limit": {
+					"sync": 0,
+					"event_group": 2
+				}
+			}
+		}
+	],
+	"exp_dur": 30,
+	"device_id": 1
+}
+
+```
+1. Under `exp_configs/gpu-tester/`, there are example configuration file for running gpu sharing experiment. The json file shown above is `input.json`, where it defined running a FasterRCNN 1440P with normal FasterRCNN on the same GPU.
+The `exp_dur` field defines the length of this experiment in seconds.<br /> 
+`device_id` defines the id of the GPU that models are loaded and their inferences would run.(We have 2 GPU in ziyizhang server and I choose to let my experiment run on the GPU with ID 1).<br />
+`models` is an array of configurations for models to be run. There should be at least one model's configuration defined.<br />
+Let's look closer at an individual model's configuration.
+```json
+        {
+			"model_name": "fasterrcnn_resnet50_fpn",
+			"model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+			"sleep_time": 0,
+			"input_file_path": "../data-set/rene/0000000099.png",
+			"output_file_path": "./logs",
+			"output_file_name": "model_A",
+			"priority": 0,
+			"resize": true,
+			"resize_size": [1440, 2560],
+			"control": {
+				"control": true,
+				"controlsync": true,
+				"controlEvent": false,
+				"queue_limit": {
+					"sync": 1,
+					"event_group": 2
+				}
+			}
+		}
+```
+`model_name`, `model_weight` are required to be pretrianed models that can be found under `torchvision.models`, `torchvision.models.detection`, and `torchvision.models.segmentation` sub-packages. You can also import more sub-packages or add your own pretrained model but I haven't tried that in the run_exp.py script.<br />
+`sleep_time` defines the sleep time in seconds between consecutive inference job of this model.(Here it is 0 which meand jobs are launched )
+
+
 `./run_test_nsight.sh`\
 Run the experiment with FastRCNN and DeepLab sharing the GPU under scheduler.\
 `./run_test_nsight_control.sh`\
