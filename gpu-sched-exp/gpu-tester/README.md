@@ -89,16 +89,25 @@ Let's look closer at an individual model's configuration.
 		}
 ```
 `model_name`, `model_weight` are required to be pretrianed models that can be found under `torchvision.models`, `torchvision.models.detection`, and `torchvision.models.segmentation` sub-packages. You can also import more sub-packages or add your own pretrained model but I haven't tried that in the run_exp.py script.<br />
-`sleep_time` defines the sleep time in seconds between consecutive inference job of this model.(Here it is 0 which meand jobs are launched )
+`sleep_time` defines the sleep time in seconds between consecutive inference job of this model.(Here it is 0 which meand jobs are launched )\
+`input_file_path` defines the path to the single image that will be fed to this model.\
+`output_file_path` defines the path to the model's output logs. It will create directories if missing.\
+`output_file_name` defines the name of the output file. The final output file will be `{output_file_name}.log`\
+`priority` defines whether this model will be preempted to give way to later inserted job (Both inserted job's and preempted jobs's `control.control` must be `true`, otherwise this setting will not take effect). Right now the controller only support two priority level: `0` as the low priority job that will be preempted by job with `1` priority. \
+`resize` can be `true` indicating the model's input resoluation will be scaled to `resize_size`.\
+`control` block defines configurations for controlling polices:
+`control.control` must be `true` to enable the following configurations since `control.control=false` means not using hooks and controller while running this model's inferences.\
+`control.controlsync=true` means we will apply the hooks with synchronization points added periodically(`control.queue_limit.sync` kernels per synchronization point) to the model's inference jobs.\
+`control.controlEvent=true` means we will apply the hooks with event group technique(`control.queue_limit.event_group` kernels per group) to the model's inference jobs.\
+When both `control.controlEvent=true` and `control.controlsync=true`, only `control.controlEvent=true` take effects. We do not support applying both event group and synchronization point methods to a model at this point.\
 
+## To run the gpu sharing experiment 
 
-`./run_test_nsight.sh`\
-Run the experiment with FastRCNN and DeepLab sharing the GPU under scheduler.\
-`./run_test_nsight_control.sh`\
-Run the experiment with FastRCNN exclusivly on GPU. \
-`./run_test_nsight_only1.sh`\
-Run the experiment with DeepLab exclusivly on GPU. \
-`./run_test_nsight_only0.sh`\
-5.On my local machine, under `~/Documents/code/remote/` run `./JCT_ziyi_cp.sh` to get experiments JCT results.
+Run experiment: `python run_exp.py -f exp_configs/input.json`.<br /> 
 
-nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s cpu -o nsight_report -f true -e --cudabacktrace=true -x true python run_exp.py -f exp_configs/input.json
+Replace `exp_configs/input.json` with path to your experiment configuration file. This command runs the experiment of one or multiple models sharing one GPU. Each model has a output file logged at location defined in the configuration file. There files contains JCT information and can be used for further analysis.
+At the same time `models_pid.json` will be created. It contains mapping from `model_name` to its process id in the experiment. 
+
+Run experiment with NSight report: `nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s cpu -o nsight_report -f true -e --cudabacktrace=true -x true python run_exp.py -f exp_configs/input.json`.<br />
+
+Replace `exp_configs/input.json` with path to your experiment configuration file. This command runs the experiment of one or multiple models sharing one GPU. Each model has a output file logged at location defined in the configuration file. There files contains JCT information and can be used for further analysis. In addition, there will be a nsight report generated: `nsight_report.nsys-rep`. You can open the report with NSight System GUI directly or copy the report and `models_pid.json` to `gpu-core-exps/gpu-sched-exp/nsight-parser` for a parser script that summarize kernel-level information for each model.  
