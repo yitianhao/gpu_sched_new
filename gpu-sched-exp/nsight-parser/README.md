@@ -7,9 +7,19 @@
 ## To run the nsight parser
 0. Under `gpu-sched-exp/gpu-tester/`, run the experiment with Nsight report. Copy `nsight_report.nsys-rep` and `models_pid.json` from there to this directory.
 
-1. Turn the `nsight_report.nsys-rep` into csv file: <br /> `nsys stats -r kernexectrace --format csv -o . nsight_reportme.nsys-rep`\
+1. Turn the `nsight_report.nsys-rep` into csv file: <br /> `nsys stats -r kernexectrace --format csv -o . nsight_report.nsys-rep`\
 It will generate `nsight_report_kernexectrace.csv` as output.
 
 2. Parse the `nsight_report_kernexectrace.csv` and `models_pid.json ` using `parseNsysRep.py`:<br />
 `python parseNsysRep.py -f nsight_report_kernexectrace.csv -p models_pid.json`\
 Result summary logs, per model kernel timelines csv, and kernel execution time CDFs are stored under `nsight_report_kernexectrace.csv_TIMESTAMP` directory.
+
+## Expected Outputs
+Run `input.json` defined experiment in `gpu-tester/` and copy `nsight_report_kernexectrace.csv` and `models_pid` in this directory and do the parsing. 
+Expected Output:
+NSight report:
+![NsightReport](../../img/input.json_expectedNsys.png) 
+FasterRCNN 1440's kernel exection time CDF:
+![FasterRCNN1440](../../img/fasterrcnn_resnet50_fpn_1440_152380_KernelExecDuration_CDF.jpg) 
+FasterRCNN's kernel exection time CDF:
+![FasterRCNN](../../img/fasterrcnn_resnet50_fpn_152381_KernelExecDuration_CDF.jpg) 
