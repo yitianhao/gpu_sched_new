@@ -136,3 +136,7 @@ FasterRCNN 1440P's JCT logs (logs/model_A.log):\
 ![FasterRCNN1440P](../../img/input_controlevent.json_modelA_expectedOutput.png) 
 FasterRCNN's JCT logs (logs/model_B.log):\
 ![FasterRCNN](../../img/input_controlevent.json_modelB_expectedOutput.png) 
+
+Run the experiment using `exp_configs/input.json` and Nsight, which is FasterRCNN 1440P and FasterRCNN sharing the GPU.
+Expected NSight Report:
+![NsightReport](../../img/input.json_expectedNsys.png) 
