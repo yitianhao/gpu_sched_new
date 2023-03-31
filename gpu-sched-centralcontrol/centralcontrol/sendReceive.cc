@@ -30,10 +30,9 @@ extern "C" void sendToCentral(const char* controlName, const char *value)
     //send to server 
     rc= memcached_set(memc, controlName, strlen(controlName), value, strlen(value), (time_t)0, (uint32_t)0);
 
-    if (rc == MEMCACHED_SUCCESS)
-      fprintf(stderr,"Send %s successfully\n", controlName);
-    else
+    if (rc != MEMCACHED_SUCCESS)
       fprintf(stderr,"Couldn't send %s: %s\n", controlName, memcached_strerror(memc, rc));
+
     
 }
 
@@ -60,9 +59,7 @@ extern "C" void requestFromCentral(const char *controlName, char **result, size_
     uint32_t returnFlag;
     *result = memcached_get(memc, controlName, strlen(controlName), resultSize, &returnFlag, &rc);
 
-    if (rc == MEMCACHED_SUCCESS)
-      fprintf(stderr,"Request %s successfully: %s\n", controlName, *result);
-    else
+    if (rc != MEMCACHED_SUCCESS)
       fprintf(stderr,"Couldn't request %s: %s\n",controlName, memcached_strerror(memc, rc));
 }
 
