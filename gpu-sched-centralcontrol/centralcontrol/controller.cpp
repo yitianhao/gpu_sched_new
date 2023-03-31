@@ -32,9 +32,9 @@ int main(int argc, char *argv[])
     rc= memcached_set(memc, key, strlen(key), value, strlen(value), (time_t)0, (uint32_t)0);
 
     if (rc != MEMCACHED_SUCCESS)
-      fprintf(stderr,"Set current_process successfully\n");
-    else
       fprintf(stderr,"Couldn't set current_process: %s\n",memcached_strerror(memc, rc));
+    else
+      fprintf(stderr,"Set current_process successfully\n");
     
     while (true) 
     {

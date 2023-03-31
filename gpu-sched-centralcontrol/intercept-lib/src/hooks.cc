@@ -65,9 +65,7 @@ void sendToCentral(const char* controlName, const char *value)
     //send to server 
     rc= memcached_set(memc, controlName, strlen(controlName), value, strlen(value), (time_t)0, (uint32_t)0);
 
-    if (rc == MEMCACHED_SUCCESS)
-      fprintf(stderr,"Hook Send %s successfully\n", controlName);
-    else
+    if (rc != MEMCACHED_SUCCESS)
       fprintf(stderr,"Couldn't send %s: %s\n", controlName, memcached_strerror(memc, rc));
     
 }
@@ -93,9 +91,7 @@ void requestFromCentral(const char *controlName, char **result, size_t *resultSi
     uint32_t returnFlag;
     *result = memcached_get(memc, controlName, strlen(controlName), resultSize, &returnFlag, &rc);
 
-    if (rc == MEMCACHED_SUCCESS)
-      fprintf(stderr,"Hook Request %s successfully: %s\n", controlName, *result);
-    else
+    if (rc != MEMCACHED_SUCCESS)
       fprintf(stderr,"Hook Couldn't request %s: %s\n",controlName, memcached_strerror(memc, rc));
 }
 /***********Communication to Central controller End***************/
@@ -408,7 +404,9 @@ CUresult cuLaunchKernel_hook(
 #endif 
             free(result);
             this_thread::sleep_for(chrono::milliseconds(1));
+#ifdef _VERBOSE_WENQING
             printf("in loop\n");
+#endif 
             requestFromCentral(controlName, &result, &resultSize); 
         }  
         free(result);
