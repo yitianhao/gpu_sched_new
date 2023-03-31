@@ -111,3 +111,28 @@ At the same time `models_pid.json` will be created. It contains mapping from `mo
 Run experiment with NSight report: `nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s cpu -o nsight_report -f true -e --cudabacktrace=true -x true python run_exp.py -f exp_configs/input.json`.<br />
 
 Replace `exp_configs/input.json` with path to your experiment configuration file. This command runs the experiment of one or multiple models sharing one GPU. Each model has a output file logged at location defined in the configuration file. There files contains JCT information and can be used for further analysis. In addition, there will be a nsight report generated: `nsight_report.nsys-rep`. You can open the report with NSight System GUI directly or copy the report and `models_pid.json` to `gpu-core-exps/gpu-sched-exp/nsight-parser` for a parser script that summarize kernel-level information for each model.  
+
+## Expected Outputs
+Run the experiment using `exp_configs/input.json`, which is FasterRCNN 1440P and FasterRCNN sharing the GPU.
+FasterRCNN 1440P's JCT logs (logs/model_A.log):\
+![FasterRCNN1440P](../../img/input.json_modelA_expectedOutput.png) 
+FasterRCNN's JCT logs (logs/model_B.log):\
+![FasterRCNN](../../img/input.json_modelB_expectedOutput.png) 
+
+Run the experiment using `exp_configs/input_control.json`, which is FasterRCNN 1440P and FasterRCNN using controller sharing the GPU.
+FasterRCNN 1440P's JCT logs (logs/model_A.log):\
+![FasterRCNN1440P](../../img/input_control.json_modelA_expectedOutput.png) 
+FasterRCNN's JCT logs (logs/model_B.log):\
+![FasterRCNN](../../img/input_control.json_modelB_expectedOutput.png) 
+
+Run the experiment using `exp_configs/input_controlsync.json`, which is FasterRCNN 1440P and FasterRCNN using controller  and  FasterRCNN 1440P is inserted synchronization point every 1 kernel sharing the GPU.
+FasterRCNN 1440P's JCT logs (logs/model_A.log):\
+![FasterRCNN1440P](../../img/input_controlsync.json_modelA_expectedOutput.png) 
+FasterRCNN's JCT logs (logs/model_B.log):\
+![FasterRCNN](../../img/input_controlsync.json_modelB_expectedOutput.png) 
+
+Run the experiment using `exp_configs/input_controlevent.json`, which is FasterRCNN 1440P and FasterRCNN using controller  and  FasterRCNN 1440P is using event group technique(groupsize 2) sharing the GPU.
+FasterRCNN 1440P's JCT logs (logs/model_A.log):\
+![FasterRCNN1440P](../../img/input_controlevent.json_modelA_expectedOutput.png) 
+FasterRCNN's JCT logs (logs/model_B.log):\
+![FasterRCNN](../../img/input_controlevent.json_modelB_expectedOutput.png) 
