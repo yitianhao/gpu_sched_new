@@ -130,7 +130,7 @@ class GeneralizedRCNNTransform(nn.Module):
             image = self.normalize(image)
             # print("before: ", image.size())
             import os
-            if os.environ['RESIZE'] == "false":
+            if not "RESIZE" in os.environ or os.environ['RESIZE'] == "false":
                 image, target_index = self.resize(image, target_index)
             # print("after: ", image.size())
             images[i] = image

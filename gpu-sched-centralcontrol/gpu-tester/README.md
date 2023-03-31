@@ -1,3 +1,14 @@
+## To Setup the gpu sharing experiment 
+0. You have already setup conda environment and replace transform.py file in torchvision with `gpu-core-exps/transform.py`. The path of the file that should be replaced is under `/home/USERNAME/miniconda3/envs/torch/lib/python3.9/site-packages/torchvision/models/detection/transform.py`
+
+1. Install memcached library https://memcached.org/downloads
+```bash
+wget http://memcached.org/latest
+tar -zxvf memcached-1.x.x.tar.gz
+cd memcached-1.x.x
+./configure && make && make test && sudo make install
+sudo apt install libmemcached-dev
+```
 ## To Run the 2x Experiment 
 1. Compile and run `expcontorller` once under `gpu-sched/pytcppexp/` to delete stale boost files and create new SharedMemory, Mutex, and conditional variable files.\
 `./make.sh`\
