@@ -11,7 +11,7 @@
 			"resize": true,
 			"resize_size": [1440, 2560],
 			"control": {
-				"control": true,
+				"control": false,
 				"controlsync": true,
 				"controlEvent": false,
 				"queue_limit": {
@@ -31,7 +31,7 @@
 			"resize": false,
 			"resize_size": [720, 1280],
 			"control": {
-				"control": true,
+				"control": false,
 				"controlsync": false,
 				"controlEvent": false,
 				"queue_limit": {
