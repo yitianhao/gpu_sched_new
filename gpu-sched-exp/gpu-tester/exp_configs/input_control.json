@@ -1,14 +1,14 @@
 {
 	"models": [
 		{
-			"model_name": "fasterrcnn_resnet50_fpn",
-			"model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+			"model_name": "deeplabv3_resnet101",
+			"model_weight": "DeepLabV3_ResNet101_Weights",
 			"sleep_time": 0,
 			"input_file_path": "../data-set/rene/0000000099.png",
 			"output_file_path": "./logs",
 			"output_file_name": "model_A",
 			"priority": 0,
-			"resize": true,
+			"resize": false,
 			"resize_size": [1440, 2560],
 			"control": {
 				"control": true,

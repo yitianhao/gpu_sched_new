@@ -1,0 +1,65 @@
+Device 1
+run_model.py: parsing file: /tmp/fasterrcnn_resnet50_fpn_a7a9hbk3.json
+Model: fasterrcnn_resnet50_fpn
+Fields:
+{
+    "model_name": "fasterrcnn_resnet50_fpn",
+    "model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+    "sleep_time": 1,
+    "input_file_path": "../data-set/rene/0000000099.png",
+    "output_file_path": "./logs",
+    "output_file_name": "model_B",
+    "priority": 1,
+    "resize": false,
+    "resize_size": [
+        720,
+        1280
+    ],
+    "control": {
+        "control": false,
+        "controlsync": false,
+        "controlEvent": false,
+        "queue_limit": {
+            "sync": 0,
+            "event_group": 2
+        }
+    }
+}
+JCT 1680367157208004278 1 3752.282594
+
+JCT 1680367158313397132 1 103.788798
+
+JCT 1680367159411739356 1 96.722767
+
+JCT 1680367160525667293 1 112.119228
+
+JCT 1680367161648402686 1 121.031144
+
+JCT 1680367162746528147 1 96.348282
+
+JCT 1680367163842084824 1 93.800571
+
+JCT 1680367164966409838 1 122.558504
+
+JCT 1680367166061557336 1 93.306165
+
+JCT 1680367167160508864 1 97.103014
+
+JCT 1680367168284543191 1 122.255018
+
+JCT 1680367169400884718 1 114.921313
+
+JCT 1680367170488971524 1 87.015958
+
+JCT 1680367171613009221 1 122.3867
+
+JCT 1680367172724860451 1 111.003184
+
+JCT 1680367173821185159 1 94.536493
+
+JCT 1680367174935548429 1 112.613622
+
+JCT 1680367176044235482 1 107.143766
+
+JCT 1680367177140880710 1 94.829157
+

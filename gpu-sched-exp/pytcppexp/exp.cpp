@@ -12,22 +12,22 @@ int main()
 {
      struct shm_remove
     {
-        shm_remove() { shared_memory_object::remove("MySharedMemory3"); }
-        ~shm_remove(){ shared_memory_object::remove("MySharedMemory3"); }
+        shm_remove() { shared_memory_object::remove("MySharedMemory2"); }
+        ~shm_remove(){ shared_memory_object::remove("MySharedMemory2"); }
     } remover;
     struct mutex_remove
     {
-        mutex_remove() { named_mutex::remove("named_mutex3"); }
-        ~mutex_remove(){ named_mutex::remove("named_mutex3"); }
+        mutex_remove() { named_mutex::remove("named_mutex2"); }
+        ~mutex_remove(){ named_mutex::remove("named_mutex2"); }
     } remover2;
      struct condition_remove
     {
-        condition_remove() { named_condition::remove("named_cnd3"); }
-        ~condition_remove(){ named_condition::remove("named_cnd3"); }
+        condition_remove() { named_condition::remove("named_cnd2"); }
+        ~condition_remove(){ named_condition::remove("named_cnd2"); }
     } cond_remover;
-    named_mutex named_mtx(open_or_create, "named_mutex3");
-    shared_memory_object shm (create_only, "MySharedMemory3", read_write);
-    named_condition named_cond(open_or_create, "named_cnd3");
+    named_mutex named_mtx(open_or_create, "named_mutex2");
+    shared_memory_object shm (create_only, "MySharedMemory2", read_write);
+    named_condition named_cond(open_or_create, "named_cnd2");
     shm.truncate(1000);
 
       //Map the whole shared memory in this process

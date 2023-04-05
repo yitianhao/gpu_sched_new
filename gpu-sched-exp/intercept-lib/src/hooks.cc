@@ -40,10 +40,10 @@ using namespace std;
 #ifdef _SCHEDULER_LOCK
 
 static bool inited_shared_mem = false;
-static boost::interprocess::shared_memory_object shm (boost::interprocess::open_only, "MySharedMemory3", boost::interprocess::read_only);
+static boost::interprocess::shared_memory_object shm (boost::interprocess::open_only, "MySharedMemory2", boost::interprocess::read_only);
 static boost::interprocess::mapped_region region(shm, boost::interprocess::read_only);
-static boost::interprocess::named_mutex named_mtx(boost::interprocess::open_only, "named_mutex3");
-static boost::interprocess::named_condition named_cnd(boost::interprocess::open_only, "named_cnd3");
+static boost::interprocess::named_mutex named_mtx(boost::interprocess::open_only, "named_mutex2");
+static boost::interprocess::named_condition named_cnd(boost::interprocess::open_only, "named_cnd2");
 
 static volatile int *current_process;
 

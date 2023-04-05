@@ -1,0 +1,154 @@
+Starting at 88029.281250, id =  1
+Device 1
+run_model.py: parsing file: /tmp/fasterrcnn_resnet50_fpn_j2d2hy8s.json
+Model: fasterrcnn_resnet50_fpn
+Fields:
+{
+    "model_name": "fasterrcnn_resnet50_fpn",
+    "model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+    "sleep_time": 1,
+    "input_file_path": "../data-set/rene/0000000099.png",
+    "output_file_path": "./logs",
+    "output_file_name": "model_B",
+    "priority": 1,
+    "resize": false,
+    "resize_size": [
+        720,
+        1280
+    ],
+    "control": {
+        "control": true,
+        "controlsync": false,
+        "controlEvent": false,
+        "queue_limit": {
+            "sync": 0,
+            "event_group": 2
+        }
+    }
+}
+1680707193121427 kernelGroupStart
+
+1680707196843378 kernelGroupEnd
+
+JCT 1680707196843584219 1 3722.671919
+
+1680707197845152 kernelGroupStart
+
+1680707197884960 kernelGroupEnd
+
+JCT 1680707197885038542 1 39.918973
+
+1680707198886545 kernelGroupStart
+
+1680707198931358 kernelGroupEnd
+
+JCT 1680707198931459636 1 44.941971
+
+1680707199933164 kernelGroupStart
+
+1680707199976072 kernelGroupEnd
+
+JCT 1680707199976165967 1 43.031209
+
+1680707200978083 kernelGroupStart
+
+1680707201027936 kernelGroupEnd
+
+JCT 1680707201028084652 1 50.092894
+
+1680707202029797 kernelGroupStart
+
+1680707202080933 kernelGroupEnd
+
+JCT 1680707202081030928 1 51.284976
+
+1680707203082681 kernelGroupStart
+
+1680707203140496 kernelGroupEnd
+
+JCT 1680707203140598414 1 57.944098
+
+1680707204142200 kernelGroupStart
+
+1680707204196615 kernelGroupEnd
+
+JCT 1680707204196691320 1 54.511568
+
+1680707205198179 kernelGroupStart
+
+1680707205238593 kernelGroupEnd
+
+JCT 1680707205238670459 1 40.516978
+
+1680707206240208 kernelGroupStart
+
+1680707206282879 kernelGroupEnd
+
+JCT 1680707206282969176 1 42.791946
+
+1680707207284043 kernelGroupStart
+
+1680707207330616 kernelGroupEnd
+
+JCT 1680707207330748140 1 46.826377
+
+1680707208332292 kernelGroupStart
+
+1680707208378091 kernelGroupEnd
+
+JCT 1680707208378179361 1 45.915992
+
+1680707209379807 kernelGroupStart
+
+1680707209423194 kernelGroupEnd
+
+JCT 1680707209423294074 1 43.516046
+
+1680707210424921 kernelGroupStart
+
+1680707210468891 kernelGroupEnd
+
+JCT 1680707210468977067 1 44.086548
+
+1680707211469792 kernelGroupStart
+
+1680707211511539 kernelGroupEnd
+
+JCT 1680707211511624707 1 41.860429
+
+1680707212513165 kernelGroupStart
+
+1680707212555407 kernelGroupEnd
+
+JCT 1680707212555498894 1 42.358099
+
+1680707213557447 kernelGroupStart
+
+1680707213614541 kernelGroupEnd
+
+JCT 1680707213614664598 1 57.307844
+
+1680707214615950 kernelGroupStart
+
+1680707214671226 kernelGroupEnd
+
+JCT 1680707214671322199 1 55.425454
+
+1680707215672902 kernelGroupStart
+
+1680707215730527 kernelGroupEnd
+
+JCT 1680707215730613502 1 57.742967
+
+1680707216732235 kernelGroupStart
+
+1680707216776919 kernelGroupEnd
+
+JCT 1680707216777030502 1 44.824989
+
+1680707217778653 kernelGroupStart
+
+1680707217833507 kernelGroupEnd
+
+JCT 1680707217833595735 1 54.97161
+
