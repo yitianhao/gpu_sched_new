@@ -3,7 +3,7 @@
 
 1. Make sure under `/dev/shm/`, `MySharedMemory3, named_cnd3, sem.named_mutex3` does not exist or owned by you. If they exist and not own by you, delete them using root privilage.
 
-2. Compile `expcontorller` under `gpu-core-exps/gpu-sched-exp/pytcppexp`. This module provides initialization script of SharedMemory, Mutex, and conditional variable files. `libgeek.so` will also be built. It is a dynamic library that will be used by PyTorch process to modfiy SharedMemroy.\
+2. Compile `expcontroller` under `gpu-core-exps/gpu-sched-exp/pytcppexp`. This module provides initialization script of SharedMemory, Mutex, and conditional variable files. `libgeek.so` will also be built. It is a dynamic library that will be used by PyTorch process to modfiy SharedMemroy.\
 `./make.sh`
 
 3. Compile hooks library under `gpu-core-exps/gpu-sched-exp/intercept-lib/`\
