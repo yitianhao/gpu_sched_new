@@ -41,7 +41,7 @@ def main():
         sys.exit(1)
     
     #Initialize share mem
-    init_process = subprocess.Popen(['./../pytcppexp/expcontorller'])
+    init_process = subprocess.Popen(['./../pytcppexp/expcontroller'])
     sleep(1)
     init_process.kill()
 

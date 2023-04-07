@@ -2,10 +2,10 @@ CXX = g++
 CXXFLAGS = -lrt -lpthread
 INCLUDE_DIR = ../minor/boost_1_61_0
 
-all: expcontorller expset.o libgeek.so
+all: expcontroller expset.o libgeek.so
 
 .PHONY: all
-expcontorller: exp.cpp
+expcontroller: exp.cpp
 	$(CXX) -g -I $(INCLUDE_DIR) $< $(CXXFLAGS) -o $@
 
 expset.o: expset.cc
@@ -16,4 +16,4 @@ libgeek.so: expset.o
 
 .PHONY: clean
 clean:
-	rm expcontorller expset.o libgeek.so
+	rm expcontroller expset.o libgeek.so
