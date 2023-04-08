@@ -3,7 +3,6 @@ import collections
 import csv
 import os
 import sys
-import numpy
 import numpy as np
 import json
 from matplotlib import pyplot
@@ -32,10 +31,10 @@ def main():
         with open(pids, 'r') as pids_input:
             experiment_pids = json.load(pids_input, object_pairs_hook=collections.OrderedDict)
     except FileNotFoundError:
-        print(f"Input Experiment PIDs file: [{filename}] not found.", file=sys.stderr)
+        print(f"Input Experiment PIDs file: [{pids}] not found.", file=sys.stderr)
         sys.exit(1)
     except json.JSONDecodeError:
-        print(f"Input Experiment PIDs file: [{filename}] invalid.", file=sys.stderr)
+        print(f"Input Experiment PIDs file: [{pids}] invalid.", file=sys.stderr)
         sys.exit(1)
 
     # Create output directory
@@ -108,13 +107,13 @@ def main():
                 summary_file.write(f"{pid_to_modelname[pid]}_{pid} {num}\n")
             summary_file.write('MedianKernelDur:\n')
             for pid, durs in kernel_durs.items():
-                summary_file.write(f"{pid_to_modelname[pid]}_{pid} {numpy.median(durs)}\n")
+                summary_file.write(f"{pid_to_modelname[pid]}_{pid} {np.median(durs)}\n")
 
         # Output CDF
         pyplot.figure(figsize=(12, 8))
         for pid, durs in kernel_durs.items():
             length = len(durs)
-            x = numpy.sort(durs)
+            x = np.sort(durs)
             # Get the CDF values of y
             y = np.arange(length) / float(length)
 
