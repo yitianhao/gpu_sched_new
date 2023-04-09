@@ -23,6 +23,8 @@ def main():
 
     os.makedirs(args.output_dir, exist_ok=True)
 
+    # csv header definition:
+    # /opt/nvidia/nsight-systems/2022.4.2/host-linux-x64/reports/kernelexectrace.py: Line 22
     df = pd.read_csv(args.file)
     durs = df['KernelDur']
 
