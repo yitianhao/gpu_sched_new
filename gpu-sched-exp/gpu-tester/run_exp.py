@@ -11,7 +11,7 @@ def createModelTempFile(models):
     model_files = []
     for model in models:
         # Create temporary file
-        model_file = tempfile.NamedTemporaryFile(mode='w+', prefix=f"{model['model_name']}_", suffix=".json") 
+        model_file = tempfile.NamedTemporaryFile(mode='w+', prefix=f"{model['model_name']}_", suffix=".json")
         # Write model to temporary file
         json.dump(model, model_file, indent=4)
         model_file.flush()
@@ -25,7 +25,8 @@ def destroyModelTempFile(model_files):
 def main():
     # Get input file path
     parser = argparse.ArgumentParser(description="Core GPU Sharing Experiment")
-    parser.add_argument('-f', '--file', metavar="FILEPATH", help="Specifies the path to the experiment configuration file", required=True)
+    parser.add_argument('-f', '--file', metavar="FILEPATH", required=True,
+                        help="Specifies the path to the experiment configuration file")
     args = parser.parse_args()
     filename = args.file
 
@@ -39,7 +40,7 @@ def main():
     except json.JSONDecodeError:
         print(f"Input Experiment Config file: [{filename}] invalid.", file=sys.stderr)
         sys.exit(1)
-    
+
     #Initialize share mem
     init_process = subprocess.Popen(['./../pytcppexp/expcontroller'])
     sleep(1)
@@ -55,39 +56,43 @@ def main():
         # Run src/run_model.py with current model configuration
         model = models[i]
         model_name = model['model_name']
-        # logging 
-        logfilename = f"{model['output_file_path']}/{model['output_file_name']}.log"
-        os.makedirs(os.path.dirname(logfilename), exist_ok=True)
-        logfile = open(f"{model['output_file_path']}/{model['output_file_name']}.log", "w") 
+        # logging
+        logfilename = os.path.join(
+            model['output_file_path'], f"{model['output_file_name']}.log")
+        os.makedirs(model['output_file_path'], exist_ok=True)
+        logfile = open(logfilename, "w")
         log_files.append(logfile)
         # hooks configuration
         process_env = os.environ.copy()
-        control = model['control']['control'] 
+        control = model['control']['control']
         controlSync = model['control']['controlsync']
         controlEvent = model['control']['controlEvent']
         if (control):
             process_env['ALNAIR_VGPU_COMPUTE_PERCENTILE'] = "99"
             process_env['CGROUP_DIR'] = "../alnair"
-            process_env['ID'] = str(model['priority']) 
+            process_env['ID'] = str(model['priority'])
             process_env['UTIL_LOG_PATH'] = "sched_tester2_sm_util.log"
             process_env['LD_PRELOAD'] = "../intercept-lib/build/lib/libcuinterpose.so"
         if (control and controlSync):
             process_env['LD_PRELOAD'] = "../intercept-lib/build/lib/libcuinterpose_sync.so"
-            process_env['SYNC_KERNELS'] = str(model['control']['queue_limit']['sync']) 
+            process_env['SYNC_KERNELS'] = str(model['control']['queue_limit']['sync'])
         if (control and controlEvent):
             process_env['LD_PRELOAD'] = "../intercept-lib/build/lib/libcuinterpose_event.so"
-            process_env['EVENT_GROUP_SIZE'] = str(model['control']['queue_limit']['event_group']) 
+            process_env['EVENT_GROUP_SIZE'] = str(model['control']['queue_limit']['event_group'])
 
         #run each model as a process
-        model_process = subprocess.Popen(['python', 'src/run_model.py', model_file.name, str(experiment_config.get('device_id'))], stdout=logfile, stderr=logfile, env=process_env)
+        model_process = subprocess.Popen(
+            ['python', 'src/run_model.py', model_file.name,
+             str(experiment_config.get('device_id'))], stdout=logfile,
+             stderr=logfile, env=process_env)
         #record model's PID
         if model['resize'] == True:
             model_pids.append((f"{model_name}_{str(model['resize_size'][0])}", model_process.pid))
         else:
             model_pids.append((model_name, model_process.pid))
         model_processes.append(model_process)
-    
-    #Stop each model at given experiment duration exhausted 
+
+    #Stop each model at given experiment duration exhausted
     exp_duration = experiment_config.get('exp_dur')
     sleep(exp_duration)
     for i, p in enumerate(model_processes):
@@ -97,10 +102,10 @@ def main():
         p.kill()
         logfile.close()
     destroyModelTempFile(model_files)
-    
+
     # Write out.log
-     
-    with open('models_pid.json', 'w') as out_log:
+
+    with open(os.path.join(model['output_file_path'], 'models_pid.json'), 'w') as out_log:
         json.dump(model_pids, out_log, indent=4)
         out_log.flush()
         # for model, pid in model_pids:
