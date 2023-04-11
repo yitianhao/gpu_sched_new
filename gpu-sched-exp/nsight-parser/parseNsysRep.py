@@ -5,7 +5,6 @@ import os
 import sys
 import numpy as np
 import json
-from matplotlib import pyplot
 from collections import OrderedDict
 from datetime import datetime
 
@@ -39,7 +38,7 @@ def main():
 
     # Create output directory
     out_dir = os.path.basename(args.file) + f"_{datetime.today().strftime('%Y%m%d%H%M%S')}"
-    os.mkdir(out_dir)
+    os.makedirs(out_dir, exist_ok=True)
 
     out_files = []
     writers = dict()
@@ -67,7 +66,7 @@ def main():
                     out_files.append(out_file)
 
                     # Add writer to dict
-                    writer = csv.writer(out_file)
+                    writer = csv.writer(out_file, lineterminator='\n')
                     writers[pid] = writer
 
                     # Write the header
@@ -108,23 +107,6 @@ def main():
             summary_file.write('MedianKernelDur:\n')
             for pid, durs in kernel_durs.items():
                 summary_file.write(f"{pid_to_modelname[pid]}_{pid} {np.median(durs)}\n")
-
-        # Output CDF
-        pyplot.figure(figsize=(12, 8))
-        for pid, durs in kernel_durs.items():
-            length = len(durs)
-            x = np.sort(durs)
-            # Get the CDF values of y
-            y = np.arange(length) / float(length)
-
-            pyplot.title(f"Model {pid_to_modelname[pid]} Kernel Execution Duration CDF")
-            pyplot.xlabel('Kernel Exection Time (ns)')
-            pyplot.ylabel('CDF')
-            pyplot.plot(x, y, marker='.')
-
-            cdf_path = os.path.join(out_dir, f"{pid_to_modelname[pid]}_{pid}_KernelExecDuration_CDF.jpg")
-            pyplot.savefig(cdf_path)
-            pyplot.clf()
 
     except FileNotFoundError:
         # Remove output directory
