@@ -21,7 +21,8 @@ def parse_args():
     parser.add_argument('--log-dir', type=str, required=True,
                         help='Directory containing multiple rounds of log '
                         'files and model pid file.')
-    parser.add_argument('--prefix', type=str, choices=("sync", "event_group"),
+    parser.add_argument('--prefix', type=str, default="sync",
+                        choices=("sync", "event_group"),
                         help='Prefix of folder name.')
     # parser.add_argument('--round', type=int, default=1,
     #                     help='Number of rounds of experiments.')
