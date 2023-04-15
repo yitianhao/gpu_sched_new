@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from utils import parse_log, read_json_file, get_jcts_from_profile, sem
 
 
@@ -65,10 +66,13 @@ def main():
     avg_model_B_profiled_jcts = [np.mean(get_jcts_from_profile(profile))
                                  for profile in args.model_B_profiles]
 
+
+    color_legend_patches = []
     fig, ax = plt.subplots(1, 1)
     for avg_model_A_profiled_jct, avg_model_B_profiled_jct, log_dir, mkr in zip(
         avg_model_A_profiled_jcts, avg_model_B_profiled_jcts, args.log_dirs, MARKERS):
         print(log_dir)
+        model_name = os.path.splitext(os.path.basename(log_dir))[0]
         model_A_inf = []
         model_B_inf = []
         xerrs = []
@@ -96,11 +100,19 @@ def main():
             # texts.append(f"sync={sync}")
         colors = COLORS[:len(model_A_inf)]
 
-        ax.scatter(model_B_inf, model_A_inf, marker=mkr, c=colors, label=f"sync={sync}") #, yerr=yerrs, xerr=xerrs, fmt='o')
+        dots = ax.scatter(model_B_inf, model_A_inf, marker=mkr, c=colors, label=model_name)
+        color_legend_patches.append(dots)
+
+
+    colors = COLORS[:len(args.syncs)]
+    for c, sync in zip(colors, args.syncs):
+        color_legend_patches.append(mpatches.Patch(color=c, label=f'sync={sync}'))
+
+    ax.legend(handles=color_legend_patches)
 
     ax.set_xlim(0, )
     ax.set_ylim(0, )
-    ax.legend()
+    # ax.legend()
     ax.set_xlabel("Small job delay inflation")
     ax.set_ylabel("Large job delay inflation")
     # ax.errorbar(xvals, yvals, yerr=yerrs, xerr=xerrs, fmt='o')
