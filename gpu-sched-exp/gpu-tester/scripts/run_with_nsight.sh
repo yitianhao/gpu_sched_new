@@ -7,7 +7,7 @@ mkdir -p $SAVE_FOLDER
 # create nsight_report.nsys-rep
 nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s cpu \
     -o ${SAVE_FOLDER}/nsight_report -f true -e --cudabacktrace=true -x true \
-    python run_exp.py -f ${CONFIG}
+    python src/run_exp.py -f ${CONFIG}
 
 # convert nsight_report.nsys-rep into csv file
 # csv header definition:
