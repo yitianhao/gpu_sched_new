@@ -1,3 +1,4 @@
+import csv
 import os
 import argparse
 import json
@@ -64,6 +65,16 @@ class SchedulerTester():
             i = read_img(img_path).unsqueeze(0)
             i = F.interpolate(i, self.resize_size)
             self.img: torch.Tensor = i.cuda()
+        csv_filename = os.path.join(
+            self.config['output_file_path'],
+            self.config['output_file_name'] + ".csv")
+        self.csv_fh = open(csv_filename, 'w')
+        self.csv_writer = csv.writer(self.csv_fh, lineterminator='\n')
+        self.csv_writer.writerow(['timestamp_ns', 'jct_ms'])
+
+    def __del__(self):
+        self.csv_fh.flush()
+        self.csv_fh.close()
 
     def infer(self):
         st: int = perf_counter_ns()
@@ -85,9 +96,10 @@ class SchedulerTester():
         else:
             res = self.model(self.img)
         torch.cuda.synchronize()
-        # print(f"{res}")
-        print(f"JCT {clock_gettime_ns(CLOCK_REALTIME)}"
-                     f" {self.priority} {(perf_counter_ns() - st) / 1000000}\n")
+        self.csv_writer.writerow(
+            [clock_gettime_ns(CLOCK_REALTIME),
+             (perf_counter_ns() - st) / 1000000])
+        self.csv_fh.flush()
         return res
 
     def run(self):
