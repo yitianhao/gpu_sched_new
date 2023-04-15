@@ -1,9 +1,10 @@
-import csv
-import os
 import argparse
+import csv
 import json
-from time import CLOCK_REALTIME, clock_gettime_ns, perf_counter_ns, sleep
+import os
+import signal
 import sys
+from time import CLOCK_REALTIME, clock_gettime_ns, perf_counter_ns, sleep
 import cv2
 import numpy as np
 import torch
@@ -13,8 +14,14 @@ from utils import read_json_file
 
 # Wenqing: Import an ad-hoc iFPC injected c++ set mem
 from ctypes import cdll
-# lib = cdll.LoadLibrary('./libgeek.so')i
 lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
+
+
+RUNNING = True
+
+def signal_handler(sig, frame):
+    global RUNNING
+    RUNNING = False
 
 
 def read_img(img_path: str):
@@ -104,7 +111,7 @@ class SchedulerTester():
 
     def run(self):
         sleep_dur = self.config['sleep_time']
-        while True:
+        while RUNNING:
             torch.cuda.nvtx.range_push("regionTest")
             self.infer()
             sys.stdout.flush()
@@ -113,6 +120,7 @@ class SchedulerTester():
 
 
 def main():
+    signal.signal(signal.SIGTERM, signal_handler)
     # Get input model configuration file path
     parser = argparse.ArgumentParser(description="Run a model's inference job")
     parser.add_argument('filename', help="Specifies the path to the model JSON file")

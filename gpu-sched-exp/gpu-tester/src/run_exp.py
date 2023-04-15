@@ -1,5 +1,4 @@
 import argparse
-import collections
 import json
 import subprocess
 import sys
@@ -99,7 +98,7 @@ def main():
         # p.wait()
         logfile = log_files[i]
         logfile.flush()
-        p.kill()
+        p.terminate()
         logfile.close()
     destroyModelTempFile(model_files)
 
