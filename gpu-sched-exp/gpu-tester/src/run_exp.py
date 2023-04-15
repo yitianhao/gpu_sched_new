@@ -6,6 +6,7 @@ import sys
 import os
 import tempfile
 from time import sleep
+from utils import read_json_file, write_json_file
 
 def createModelTempFile(models):
     model_files = []
@@ -32,8 +33,7 @@ def main():
 
     # Parse Experiment Configuration JSON file
     try:
-        with open(filename, 'r') as file_input:
-            experiment_config = json.load(file_input, object_pairs_hook=collections.OrderedDict)
+        experiment_config = read_json_file(filename)
     except FileNotFoundError:
         print(f"Input Experiment Config file: [{filename}] not found.", file=sys.stderr)
         sys.exit(1)
@@ -104,13 +104,9 @@ def main():
     destroyModelTempFile(model_files)
 
     # Write out.log
-
-    with open(os.path.join(model['output_file_path'], 'models_pid.json'), 'w') as out_log:
-        json.dump(model_pids, out_log, indent=4)
-        out_log.flush()
-        # for model, pid in model_pids:
-            # out_log.write(f"{model} {pid}\n")
-        print("PID summary log saved as [models_pid.json]")
+    write_json_file(
+        os.path.join(model['output_file_path'], 'models_pid.json'), model_pids)
+    print("PID summary log saved as [models_pid.json]")
 
 
 if __name__ == '__main__':

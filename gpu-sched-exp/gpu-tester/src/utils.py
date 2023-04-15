@@ -8,6 +8,11 @@ def read_json_file(filename):
         content = json.load(f, object_pairs_hook=collections.OrderedDict)
     return content
 
+def write_json_file(filename, content):
+    with open(filename, 'w') as f:
+        json.dump(content, f, indent=4)
+        f.flush()
+
 def read_yaml_file(filename):
     with open(filename, 'r') as f:
         content = yaml.safe_load(f)
