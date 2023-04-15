@@ -1,6 +1,4 @@
 import argparse
-import collections
-import json
 import os
 import matplotlib
 matplotlib.use('agg')
@@ -8,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
 import pandas as pd
+from utils import read_json_file
 
 SEC_IN_NS = 1e9
 
@@ -17,12 +16,6 @@ def cdf(data):
     # Get the CDF values of y
     y = np.arange(length) / float(length)
     return x, y
-
-
-def read_json_file(filename):
-    with open(filename, 'r') as f:
-        content = json.load(f, object_pairs_hook=collections.OrderedDict)
-    return content
 
 
 def main():

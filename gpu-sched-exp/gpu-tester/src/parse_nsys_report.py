@@ -1,5 +1,4 @@
 import argparse
-import collections
 import csv
 import os
 import sys
@@ -7,6 +6,7 @@ import numpy as np
 import json
 from collections import OrderedDict
 from datetime import datetime
+from utils import read_json_file
 
 # Column indexes
 COL_API_START = 0
@@ -27,8 +27,7 @@ def main():
 
     # Parse Experiment PIDs file
     try:
-        with open(pids, 'r') as pids_input:
-            experiment_pids = json.load(pids_input, object_pairs_hook=collections.OrderedDict)
+        experiment_pids = read_json_file(args.pids)
     except FileNotFoundError:
         print(f"Input Experiment PIDs file: [{pids}] not found.", file=sys.stderr)
         sys.exit(1)
