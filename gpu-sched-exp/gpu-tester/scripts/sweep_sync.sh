@@ -13,7 +13,7 @@ for sync in 1 2 4 8 10 20 50 100 500 1000 5000 10000 1000000; do
     jq .models[0].control.queue_limit.sync=$sync ${config_file}  | \
     jq --arg out_path "${out_path}" '.models[0].output_file_path=$out_path' | \
     jq --arg out_path "${out_path}" '.models[1].output_file_path=$out_path' > ${tmp_config_file}
-    python run_exp.py -f /tmp/input_controlevent.json
+    python src/run_exp.py -f /tmp/input_controlevent.json
         # mv ../results/fcn_new/fcn_new_sync_${sync} ../results/fcn_new/sync_$sync
     # done
 done
@@ -26,5 +26,5 @@ for event_group in 1 2 4 8 10 20 50 100 500 1000 5000 10000 1000000; do
     jq .models[0].control.queue_limit.event_group=$event_group ${config_file}  | \
     jq --arg out_path "${out_path}" '.models[0].output_file_path=$out_path' | \
     jq --arg out_path "${out_path}" '.models[1].output_file_path=$out_path' > ${tmp_config_file}
-    python run_exp.py -f /tmp/input_controlevent.json
+    python src/run_exp.py -f /tmp/input_controlevent.json
 done

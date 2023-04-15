@@ -6,3 +6,5 @@ gpu-sched-exp/intercept-lib/build/
 gpu-sched-exp/gpu-tester/logs/
 gpu-sched-exp/gpu-tester/models_pid.json
 __pycache__
+.ccls-cache
+.cache
