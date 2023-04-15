@@ -40,10 +40,17 @@ using namespace std;
 #ifdef _SCHEDULER_LOCK
 
 static bool inited_shared_mem = false;
-static boost::interprocess::shared_memory_object shm (boost::interprocess::open_only, "MySharedMemory3", boost::interprocess::read_only);
+static string username(getenv("USER"));
+static string shm_name("MySharedMemory_" + username);
+static string named_mtx_name("named_mutex_" + username);
+static string named_cnd_name("named_cnd_" + username);
+static boost::interprocess::shared_memory_object shm(
+    boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_only);
 static boost::interprocess::mapped_region region(shm, boost::interprocess::read_only);
-static boost::interprocess::named_mutex named_mtx(boost::interprocess::open_only, "named_mutex3");
-static boost::interprocess::named_condition named_cnd(boost::interprocess::open_only, "named_cnd3");
+static boost::interprocess::named_mutex named_mtx(
+    boost::interprocess::open_only, named_mtx_name.c_str());
+static boost::interprocess::named_condition named_cnd(
+    boost::interprocess::open_only, named_cnd_name.c_str());
 
 static volatile int *current_process;
 
@@ -57,7 +64,7 @@ void init_shared_mem() {
     inited_shared_mem = true;
     int *mem = static_cast<int*>(region.get_address());
 
-    current_process = &mem[0]; 
+    current_process = &mem[0];
     #ifdef _VERBOSE_WENQING
 	timestamp = printUTCTime();
 	PrintThread{} << timestamp << " hook" << get_id() << " init_shared_mem exited" << std::endl;
@@ -90,7 +97,7 @@ static void adjust_fill_rate(uint32_t target_usage, uint32_t cur_group_usage)
 	uint32_t adjusted_group_usage =  cur_group_usage + target_usage;
 	// if the difference is larger than half of the target_usage, it will
 	// trigger a more intense adjustment
-	uint32_t trigger = target_usage / 2 > MAX_DIFF_ALLOWANCE 
+	uint32_t trigger = target_usage / 2 > MAX_DIFF_ALLOWANCE
 		? MAX_DIFF_ALLOWANCE : target_usage / 2;
 	if (cur_group_usage < target_usage) {
 		uint32_t diff = target_usage - cur_group_usage;
@@ -98,7 +105,7 @@ static void adjust_fill_rate(uint32_t target_usage, uint32_t cur_group_usage)
 		if (diff > trigger)
 			adjust = uint32_t(
 					ADJUST_ADD_CONST * diff * target_usage);
-        tb.fill_rate = tb.fill_rate + adjust > tb.fill_rate_cap 
+        tb.fill_rate = tb.fill_rate + adjust > tb.fill_rate_cap
 			? tb.fill_rate_cap : tb.fill_rate + adjust;
 	} else {
 		if (adjusted_group_usage > target_usage) {
@@ -108,8 +115,8 @@ static void adjust_fill_rate(uint32_t target_usage, uint32_t cur_group_usage)
 		}
 	}
 #else
-	uint32_t diff = target_usage > cur_group_usage 
-		? target_usage - cur_group_usage 
+	uint32_t diff = target_usage > cur_group_usage
+		? target_usage - cur_group_usage
 		: cur_group_usage - target_usage;
     uint32_t adjust = ADJUST_ADD_CONST * diff;
     if (diff > target_usage / 2)
@@ -125,7 +132,7 @@ static void adjust_fill_rate(uint32_t target_usage, uint32_t cur_group_usage)
 	DEBUG_FILL_R(target_usage, cur_group_usage);
 }
 
-static void dyn_adjust_fr_sched() 
+static void dyn_adjust_fr_sched()
 {
     uint32_t cur_group_usage;
 
@@ -138,7 +145,7 @@ static void dyn_adjust_fr_sched()
         pthread_mutex_lock(&tb.mutex);
         tb.cur_tokens = (tb.cur_tokens + tb.fill_rate) > tb.max_burst
 			? tb.max_burst : tb.cur_tokens + tb.fill_rate;
-        pthread_mutex_unlock(&tb.mutex);        
+        pthread_mutex_unlock(&tb.mutex);
     }
 }
 
@@ -149,7 +156,7 @@ static void kernel_lat_sched()
 	for (;;) {
         pthread_mutex_lock(&tb.mutex);
         tb.cur_tokens = fill_rate;
-        pthread_mutex_unlock(&tb.mutex);        
+        pthread_mutex_unlock(&tb.mutex);
 		nanosleep(&tb.sample_period, NULL);
 	}
 }
@@ -159,7 +166,7 @@ static void *sched_bootstrap(void *args)
 	// If user doesn't want to constrain the compute usage, no need to run this
 	// thread. This will always be true if more than one devices are visible.
     if (gpu_compute_limit == 100) return NULL;
-    
+
 	// wait for cuInit hook and posthook finish
 	while (!pre_initialized || !post_initialized)
 		nanosleep(&tb.sample_period, NULL);
@@ -193,8 +200,8 @@ static void post_cuinit(void)
 	}
 
     // Here we only support compute resource sharing within a single device.
-    // If multiple devices are visible, gpuComputeLimit would be 100, 
-    // and the previous statement would have already exited. 
+    // If multiple devices are visible, gpuComputeLimit would be 100,
+    // and the previous statement would have already exited.
     CUDA_CHECK(cuDeviceGet(&dev, 0));
     CUDA_CHECK(
 		cuDeviceGetAttribute(
@@ -210,7 +217,7 @@ static void post_cuinit(void)
 	// max_instruct_per_ns = num_sm * num_thd_per_sm * clock_hz / 1e9
 	// max_instruct_per_sample_period_ns =
 	// 		num_sm * num_thd_per_sm * clock_hz / 1e9 * sample_period
-    // tb.fill_rate_cap = num_sm * num_thd_per_sm * GPU_CLOCK_HZ 
+    // tb.fill_rate_cap = num_sm * num_thd_per_sm * GPU_CLOCK_HZ
 	// 	/ SEC_IN_NS * tb.refill_interval.tv_nsec * gpu_compute_limit / 100;
 
     tb.fill_rate_cap = num_sm * num_thd_per_sm /
@@ -243,7 +250,7 @@ CUresult cuInit_hook(uint32_t flags)
 {
     CUresult cures = CUDA_SUCCESS;
     int res = 0;
-    
+
     // initialize for GPU memory monitoring
     res = pthread_once(&pre_cuinit_ctrl, pre_cuinit);
     if (res < 0) fprintf(stderr,"pre_cuinit failed, errno=%d\n", errno);
@@ -280,7 +287,7 @@ CUresult cuMemAllocManaged_hook(CUdeviceptr *dptr, size_t byte_sz, uint32_t
 CUresult cuMemAllocPitch_hook(CUdeviceptr *dptr, size_t *pPitch, size_t
 		WidthInBytes, size_t Height, uint32_t ElementSizeBytes)
 {
-    
+
     size_t toAllocate = WidthInBytes * Height / 100 * 101;
     return validate_memory(toAllocate);
 }
@@ -294,7 +301,7 @@ CUresult cuArrayCreate_hook(
     height = (height == 0) ? 1 : height;
     toAllocate = pAllocateArray->NumChannels * pAllocateArray->Width * height;
     toAllocate *= get_size_of(pAllocateArray->Format);
-    return validate_memory(toAllocate);  
+    return validate_memory(toAllocate);
 }
 
 CUresult cuArray3DCreate_hook(
@@ -313,8 +320,8 @@ CUresult cuArray3DCreate_hook(
 }
 
 CUresult cuMipmappedArrayCreate_hook(
-		CUmipmappedArray *pHandle, 
-		const CUDA_ARRAY3D_DESCRIPTOR *pMipmappedArrayDesc, 
+		CUmipmappedArray *pHandle,
+		const CUDA_ARRAY3D_DESCRIPTOR *pMipmappedArrayDesc,
 		uint32_t numMipmapLevels)
 {
     size_t depth = pMipmappedArrayDesc->Depth;
@@ -333,9 +340,9 @@ CUresult cuMipmappedArrayCreate_hook(
  * Wenqing: Logic executed before intercepted cuLaunchKernel CUDA call.
 */
 CUresult cuLaunchKernel_hook(
-		CUfunction f, uint32_t gridDimX, uint32_t gridDimY, 
-		uint32_t gridDimZ, uint32_t blockDimX, uint32_t blockDimY, 
-		uint32_t blockDimZ, uint32_t sharedMemBytes, CUstream hStream, 
+		CUfunction f, uint32_t gridDimX, uint32_t gridDimY,
+		uint32_t gridDimZ, uint32_t blockDimX, uint32_t blockDimY,
+		uint32_t blockDimZ, uint32_t sharedMemBytes, CUstream hStream,
 		void** kernelParams, void** extra)
 {
     CUresult cures = CUDA_SUCCESS;
@@ -361,7 +368,7 @@ CUresult cuLaunchKernel_hook(
             int prev_idx = (cur_event_idx - 2 + EVENT_POOL_SIZE) % EVENT_POOL_SIZE;
             while((counter++) % 100 != 0 || cudaEventQuery(cu_event_cycle[prev_idx]) != cudaSuccess) {
                 // printf("waitting\n");
-                // wait 
+                // wait
             }
         }
     }
@@ -370,9 +377,9 @@ CUresult cuLaunchKernel_hook(
     // printf("%d %d\n", kernel_launch_time, get_id());
 
 #endif
- 
+
 #ifdef _SCHEDULER_LOCK
-    
+
     if(!inited_shared_mem) {
         init_shared_mem();
     }
@@ -389,21 +396,21 @@ CUresult cuLaunchKernel_hook(
 	    char *timestamp = printUTCTime();
 	    PrintThread{} << timestamp << " hook" << get_id() << "before loop" << *current_process << std::endl;
         free(timestamp);
-#endif 
-        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx); 
+#endif
+        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         while(*current_process == 1) {
 #ifdef _VERBOSE_WENQING
 	        char *timestamp = printUTCTime();
 	        PrintThread{} << timestamp << " hook" << get_id() << "in loop" << *current_process << std::endl;
             free(timestamp);
-#endif 
+#endif
             named_cnd.wait(lock);
-        }  
+        }
 #ifdef _VERBOSE_WENQING
 	    timestamp = printUTCTime();
 	    PrintThread{} << timestamp << " hook" << get_id() << "after loop" << *current_process << std::endl;
         free(timestamp);
-#endif 
+#endif
     }
 #ifdef _VERBOSE_WENQING
 	timestamp = printUTCTime();
@@ -441,7 +448,7 @@ CUresult cuLaunchKernel_hook(
             cudaEventCreate(&cu_end[i]);
         }
     }
-    
+
     if((kernel_launch_time - 1) / CNT_KERNER_CALL == 15) {
         if((kernel_launch_time - 1) % CNT_KERNER_CALL == 0) {
             cudaEventRecord(cu_global_start, hStream);
@@ -449,7 +456,7 @@ CUresult cuLaunchKernel_hook(
         cudaEventRecord(cu_start[(kernel_launch_time - 1) % CNT_KERNER_CALL], hStream);
     }
 
-    // 
+    //
 
     // if(kernel_launch_time > 1) {
     //     cudaEventSynchronize(cu_start);
@@ -459,9 +466,9 @@ CUresult cuLaunchKernel_hook(
     // }
 
 #endif
-#ifdef _KERNEL_TIMESTAMP_WENQING 
+#ifdef _KERNEL_TIMESTAMP_WENQING
 	PrintThread{} << getMicrosecUTCTime() << " " << get_id() << " kernelStart" << std::endl;
-#endif 
+#endif
     return cures;
 }
 
@@ -469,9 +476,9 @@ CUresult cuLaunchKernel_hook(
  * Wenqing: Logic executed after cuLaunchKernel CUDA call.
 */
 CUresult cuLaunchKernel_posthook(
-		CUfunction f, uint32_t gridDimX, uint32_t gridDimY, 
-		uint32_t gridDimZ, uint32_t blockDimX, uint32_t blockDimY, 
-		uint32_t blockDimZ, uint32_t sharedMemBytes, CUstream hStream, 
+		CUfunction f, uint32_t gridDimX, uint32_t gridDimY,
+		uint32_t gridDimZ, uint32_t blockDimX, uint32_t blockDimY,
+		uint32_t blockDimZ, uint32_t sharedMemBytes, CUstream hStream,
 		void** kernelParams, void** extra)
 {
 	CUresult ret = CUDA_SUCCESS;
@@ -504,7 +511,7 @@ CUresult cuLaunchKernel_posthook(
 #endif
 
 #ifdef _SCHEDULER_LOCK
-    
+
 #ifdef _VERBOSE_WENQING
 	char *timestamp = printUTCTime();
 	PrintThread{} << timestamp << " hook" << get_id() << "kernelpost entered" << std::endl;
@@ -517,9 +524,9 @@ CUresult cuLaunchKernel_posthook(
 	PrintThread{} << timestamp << " hook" << get_id() << "kernelpost exited" << std::endl;
     free(timestamp);
 #endif
-#ifdef _KERNEL_TIMESTAMP_WENQING 
+#ifdef _KERNEL_TIMESTAMP_WENQING
 	PrintThread{} << getMicrosecUTCTime() << " " << get_id() << " kernelEnd" << std::endl;
-#endif 
+#endif
 #ifdef _SYNC_QUEUE
     //only add synchronization point to the long job.
     static int cnt = 0;
@@ -527,14 +534,14 @@ CUresult cuLaunchKernel_posthook(
         cuStreamSynchronize(hStream);
 #ifdef _VERBOSE_WENQING
         PrintThread{} << getMicrosecUTCTime() << " " << cnt << " Sync" << std::endl;
-#endif	
+#endif
     }
 #endif
 	return ret;
 }
 
 CUresult cuLaunchCooperativeKernel_hook(
-		CUfunction f, uint32_t gridDimX, uint32_t gridDimY, 
+		CUfunction f, uint32_t gridDimX, uint32_t gridDimY,
 		uint32_t gridDimZ, uint32_t blockDimX, uint32_t blockDimY,
 		uint32_t blockDimZ, uint32_t sharedMemBytes,
 		CUstream hStream, void **kernelParams)
@@ -542,12 +549,12 @@ CUresult cuLaunchCooperativeKernel_hook(
     return cuLaunchKernel_hook(
 			f,
 			gridDimX, gridDimY, gridDimZ,
-			blockDimX, blockDimY, blockDimZ, 
+			blockDimX, blockDimY, blockDimZ,
             sharedMemBytes, hStream, kernelParams, NULL);
 }
 
 CUresult cuLaunchCooperativeKernel_posthook(
-		CUfunction f, uint32_t gridDimX, uint32_t gridDimY, 
+		CUfunction f, uint32_t gridDimX, uint32_t gridDimY,
 		uint32_t gridDimZ, uint32_t blockDimX, uint32_t blockDimY,
 		uint32_t blockDimZ, uint32_t sharedMemBytes,
 		CUstream hStream, void **kernelParams)
@@ -555,7 +562,7 @@ CUresult cuLaunchCooperativeKernel_posthook(
     return cuLaunchKernel_posthook(
 			f,
 			gridDimX, gridDimY, gridDimZ,
-			blockDimX, blockDimY, blockDimZ, 
+			blockDimX, blockDimY, blockDimZ,
             sharedMemBytes, hStream, kernelParams, NULL);
 }
 

@@ -14,17 +14,24 @@
 using namespace std;
 
 static int inited_shared_mem = 0;
-static boost::interprocess::shared_memory_object shm (boost::interprocess::open_only, "MySharedMemory3", boost::interprocess::read_write);
+static string username(getenv("USER"));
+static string shm_name("MySharedMemory_" + username);
+static string named_mtx_name("named_mutex_" + username);
+static string named_cnd_name("named_cnd_" + username);
+static boost::interprocess::shared_memory_object shm(
+    boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_write);
 static boost::interprocess::mapped_region region(shm, boost::interprocess::read_write);
-static boost::interprocess::named_mutex named_mtx(boost::interprocess::open_only, "named_mutex3");
-static boost::interprocess::named_condition named_cnd{boost::interprocess::open_only, "named_cnd3"};
+static boost::interprocess::named_mutex named_mtx(
+    boost::interprocess::open_only, named_mtx_name.c_str());
+static boost::interprocess::named_condition named_cnd{
+    boost::interprocess::open_only, named_cnd_name.c_str()};
 
 static volatile int *current_process;
 
 void init_shared_mem_expset() {
     inited_shared_mem = 1;
     int *mem = static_cast<int*>(region.get_address());
-    current_process = &mem[0]; 
+    current_process = &mem[0];
 }
 
 extern "C" void setMem(int input) {
@@ -40,7 +47,7 @@ extern "C" void setMem(int input) {
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         *current_process = input;
     }
-} 
+}
 
 extern "C" void printCurr()
 {
