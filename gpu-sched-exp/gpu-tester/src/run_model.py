@@ -72,6 +72,7 @@ class SchedulerTester():
             i = read_img(img_path).unsqueeze(0)
             i = F.interpolate(i, self.resize_size)
             self.img: torch.Tensor = i.cuda()
+        os.makedirs(self.config['output_file_path'], exist_ok=True)
         csv_filename = os.path.join(
             self.config['output_file_path'],
             self.config['output_file_name'] + ".csv")
@@ -123,20 +124,20 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     # Get input model configuration file path
     parser = argparse.ArgumentParser(description="Run a model's inference job")
-    parser.add_argument('filename', help="Specifies the path to the model JSON file")
-    parser.add_argument('deviceid', help="Specifies the gpu to run")
+    parser.add_argument('filename', type=str,
+                        help="Specifies the path to the model JSON file")
+    parser.add_argument('deviceid', type=int, help="Specifies the gpu to run")
     args = parser.parse_args()
     filename = args.filename
     device_id = args.deviceid
 
-    print("Device", int(device_id))
+    print("Device", device_id)
     # set the directory for downloading models
     torch.hub.set_dir("../torch_cache/")
     # set the cuda device to use
-    torch.cuda.set_device(int(device_id))
+    torch.cuda.set_device(device_id)
     try:
         print(f"run_model.py: parsing file: {filename}")
-        torch.cuda.set_device(int(sys.argv[2]))
         data = read_json_file(filename)
         print(f"Model: {data['model_name']}")
         print("Fields:")
