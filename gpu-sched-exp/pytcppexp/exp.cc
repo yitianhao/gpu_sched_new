@@ -1,3 +1,4 @@
+#include <csignal>
 #include <iostream>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -12,8 +13,15 @@ static string shm_name("MySharedMemory_" + username);
 static string named_mtx_name("named_mutex_" + username);
 static string named_cnd_name("named_cnd_" + username);
 
+volatile int running = 1;
+
+void signal_handler(int signum) {
+    running = 0;
+}
+
 int main()
 {
+    signal(SIGINT, signal_handler);
     struct shm_remove
     {
         shm_remove() { shared_memory_object::remove(shm_name.c_str()); }
@@ -45,7 +53,7 @@ int main()
     *current_process = -1;
     printf("init curr: %d\n", *current_process);
 
-    while (true)
+    while (running)
     {
         // do nothing. Keep shared memory alive.
         if (*current_process == 1) {

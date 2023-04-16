@@ -5,7 +5,7 @@ INCLUDE_DIR = ../minor/boost_1_61_0
 all: expcontroller expset.o libgeek.so
 
 .PHONY: all
-expcontroller: exp.cpp
+expcontroller: exp.cc
 	$(CXX) -g -I $(INCLUDE_DIR) $< $(CXXFLAGS) -o $@
 
 expset.o: expset.cc
