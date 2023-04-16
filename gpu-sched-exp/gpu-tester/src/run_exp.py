@@ -1,6 +1,7 @@
 import argparse
 import json
 import subprocess
+import signal
 import sys
 import os
 import tempfile
@@ -43,7 +44,7 @@ def main():
     #Initialize share mem
     init_process = subprocess.Popen(['./../pytcppexp/expcontroller'])
     sleep(1)
-    init_process.kill()
+    init_process.send_signal(signal.SIGSTOP)
 
     #Run each model
     models = experiment_config.get('models', [])
@@ -106,6 +107,8 @@ def main():
     write_json_file(
         os.path.join(model['output_file_path'], 'models_pid.json'), model_pids)
     print("PID summary log saved as [models_pid.json]")
+    init_process.send_signal(signal.SIGCONT)
+    init_process.send_signal(signal.SIGINT)
 
 
 if __name__ == '__main__':
