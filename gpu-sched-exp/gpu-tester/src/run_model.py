@@ -14,7 +14,7 @@ from utils import read_json_file
 
 # Wenqing: Import an ad-hoc iFPC injected c++ set mem
 from ctypes import cdll
-lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
+# lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
 
 
 RUNNING = True
@@ -36,6 +36,9 @@ class SchedulerTester():
     def __init__(self, control, config, resize=False, resize_size=(1440, 2560)) -> None:
         self.control = control
         self.priority = config['priority']
+        if self.control and self.priority > 0:
+            # only load library when needed
+            self.lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
         self.config = config
         self.resize = config['resize']
         resize_size_list = config['resize_size']
@@ -90,14 +93,14 @@ class SchedulerTester():
         res = None # res :torch.Tensor
         if self.control and self.priority > 0:
             try:
-                lib.setMem(1)
+                self.lib.setMem(1)
             except Exception as e: print(e)
             print(f"{int(clock_gettime_ns(CLOCK_REALTIME) / 1000)} kernelGroupStart\n")
             res = self.model(self.img)
             print(f"{int(clock_gettime_ns(CLOCK_REALTIME) / 1000)} kernelGroupEnd\n")
             try:
 
-                lib.setMem(0)
+                self.lib.setMem(0)
             except Exception as e: print(e)
             # read and print shared memory's current value
             # lib.printCurr()
