@@ -81,35 +81,34 @@ class SchedulerTester():
             self.config['output_file_name'] + ".csv")
         self.csv_fh = open(csv_filename, 'w')
         self.csv_writer = csv.writer(self.csv_fh, lineterminator='\n')
-        self.csv_writer.writerow(['timestamp_ns', 'jct_ms'])
+        self.csv_writer.writerow(['start_timestamp_ns', 'end_timestamp_ns', 'jct_ms'])
 
     def __del__(self):
         self.csv_fh.flush()
         self.csv_fh.close()
 
     def infer(self):
-        st: int = perf_counter_ns()
         # print(f"starting inference, idx: {self.idx} at {int(time.time() * 1000000000) // 1000 % 100000000 / 1000.0}")
         res = None # res :torch.Tensor
         if self.control and self.priority > 0:
             try:
                 self.lib.setMem(1)
-            except Exception as e: print(e)
-            print(f"{int(clock_gettime_ns(CLOCK_REALTIME) / 1000)} kernelGroupStart\n")
-            res = self.model(self.img)
-            print(f"{int(clock_gettime_ns(CLOCK_REALTIME) / 1000)} kernelGroupEnd\n")
+            except Exception as e:
+                print(e)
+        start_t: int = perf_counter_ns()
+        res = self.model(self.img)
+        torch.cuda.synchronize()
+        end_t: int = perf_counter_ns()
+        if self.control and self.priority > 0:
             try:
-
                 self.lib.setMem(0)
-            except Exception as e: print(e)
+            except Exception as e:
+                print(e)
             # read and print shared memory's current value
             # lib.printCurr()
-        else:
-            res = self.model(self.img)
-        torch.cuda.synchronize()
-        self.csv_writer.writerow(
-            [clock_gettime_ns(CLOCK_REALTIME),
-             (perf_counter_ns() - st) / 1000000])
+        self.csv_writer.writerow([start_t, end_t,
+            # [clock_gettime_ns(CLOCK_REALTIME),
+             (end_t - start_t) / 1000000])
         self.csv_fh.flush()
         return res
 
