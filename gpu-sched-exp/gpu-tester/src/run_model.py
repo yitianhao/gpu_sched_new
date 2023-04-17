@@ -124,7 +124,7 @@ class SchedulerTester():
 
 
 def main():
-    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     # Get input model configuration file path
     parser = argparse.ArgumentParser(description="Run a model's inference job")
     parser.add_argument('filename', type=str,
