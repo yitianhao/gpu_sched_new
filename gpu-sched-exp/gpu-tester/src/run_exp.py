@@ -99,7 +99,7 @@ def main():
         # p.wait()
         logfile = log_files[i]
         logfile.flush()
-        p.terminate()
+        p.send_signal(signal.SIGINT)
         logfile.close()
     destroyModelTempFile(model_files)
 

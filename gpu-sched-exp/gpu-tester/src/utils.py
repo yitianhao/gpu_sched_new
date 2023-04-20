@@ -2,6 +2,7 @@ import collections
 import json
 import numpy as np
 import yaml
+import pandas as pd
 
 def read_json_file(filename):
     with open(filename, 'r') as f:
@@ -22,14 +23,21 @@ def sem(data):
     return np.std(data) / np.sqrt(len(data))
 
 def parse_log(filename):
-    jcts = []
-    with open(filename, 'r') as f:
-        for line in f:
-            # Strips the newline character
-            cols = line.rstrip('\n').split(" ")
-            if len(cols) == 4 and cols[0] == "JCT":
-                jcts.append(float(cols[3]))
-    return jcts[1:]
+    if filename.endswith(".csv"):
+        df = pd.read_csv(filename)
+        return df[1:]
+    raise ValueError("Unrecoginized file extension.")
+    # drop the first jct which is high due to cold start
+
+
+    # elif filename.endswith(".log"):
+    #     jcts = []
+    #     with open(filename, 'r') as f:
+    #         for line in f:
+    #             # Strips the newline character
+    #             cols = line.rstrip('\n').split(" ")
+    #             if len(cols) == 4 and cols[0] == "JCT":
+    #                 jcts.append(float(cols[3]))
 
 
 def get_jcts_from_profile(profile_filename):

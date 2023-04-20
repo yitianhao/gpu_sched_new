@@ -14,7 +14,7 @@ from utils import read_json_file
 
 # Wenqing: Import an ad-hoc iFPC injected c++ set mem
 from ctypes import cdll
-lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
+# lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
 
 
 RUNNING = True
@@ -36,6 +36,9 @@ class SchedulerTester():
     def __init__(self, control, config, resize=False, resize_size=(1440, 2560)) -> None:
         self.control = control
         self.priority = config['priority']
+        if self.control and self.priority > 0:
+            # only load library when needed
+            self.lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
         self.config = config
         self.resize = config['resize']
         resize_size_list = config['resize_size']
@@ -72,40 +75,40 @@ class SchedulerTester():
             i = read_img(img_path).unsqueeze(0)
             i = F.interpolate(i, self.resize_size)
             self.img: torch.Tensor = i.cuda()
+        os.makedirs(self.config['output_file_path'], exist_ok=True)
         csv_filename = os.path.join(
             self.config['output_file_path'],
             self.config['output_file_name'] + ".csv")
         self.csv_fh = open(csv_filename, 'w')
         self.csv_writer = csv.writer(self.csv_fh, lineterminator='\n')
-        self.csv_writer.writerow(['timestamp_ns', 'jct_ms'])
+        self.csv_writer.writerow(['start_timestamp_ns', 'end_timestamp_ns', 'jct_ms'])
 
     def __del__(self):
         self.csv_fh.flush()
         self.csv_fh.close()
 
     def infer(self):
-        st: int = perf_counter_ns()
         # print(f"starting inference, idx: {self.idx} at {int(time.time() * 1000000000) // 1000 % 100000000 / 1000.0}")
         res = None # res :torch.Tensor
         if self.control and self.priority > 0:
             try:
-                lib.setMem(1)
-            except Exception as e: print(e)
-            print(f"{int(clock_gettime_ns(CLOCK_REALTIME) / 1000)} kernelGroupStart\n")
-            res = self.model(self.img)
-            print(f"{int(clock_gettime_ns(CLOCK_REALTIME) / 1000)} kernelGroupEnd\n")
+                self.lib.setMem(1)
+            except Exception as e:
+                print(e)
+        start_t: int = perf_counter_ns()
+        res = self.model(self.img)
+        torch.cuda.synchronize()
+        end_t: int = perf_counter_ns()
+        if self.control and self.priority > 0:
             try:
-
-                lib.setMem(0)
-            except Exception as e: print(e)
+                self.lib.setMem(0)
+            except Exception as e:
+                print(e)
             # read and print shared memory's current value
             # lib.printCurr()
-        else:
-            res = self.model(self.img)
-        torch.cuda.synchronize()
-        self.csv_writer.writerow(
-            [clock_gettime_ns(CLOCK_REALTIME),
-             (perf_counter_ns() - st) / 1000000])
+        self.csv_writer.writerow([start_t, end_t,
+            # [clock_gettime_ns(CLOCK_REALTIME),
+             (end_t - start_t) / 1000000])
         self.csv_fh.flush()
         return res
 
@@ -120,23 +123,23 @@ class SchedulerTester():
 
 
 def main():
-    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     # Get input model configuration file path
     parser = argparse.ArgumentParser(description="Run a model's inference job")
-    parser.add_argument('filename', help="Specifies the path to the model JSON file")
-    parser.add_argument('deviceid', help="Specifies the gpu to run")
+    parser.add_argument('filename', type=str,
+                        help="Specifies the path to the model JSON file")
+    parser.add_argument('deviceid', type=int, help="Specifies the gpu to run")
     args = parser.parse_args()
     filename = args.filename
     device_id = args.deviceid
 
-    print("Device", int(device_id))
+    print("Device", device_id)
     # set the directory for downloading models
     torch.hub.set_dir("../torch_cache/")
     # set the cuda device to use
-    torch.cuda.set_device(int(device_id))
+    torch.cuda.set_device(device_id)
     try:
         print(f"run_model.py: parsing file: {filename}")
-        torch.cuda.set_device(int(sys.argv[2]))
         data = read_json_file(filename)
         print(f"Model: {data['model_name']}")
         print("Fields:")
