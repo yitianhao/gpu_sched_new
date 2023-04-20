@@ -397,6 +397,7 @@ CUresult cuLaunchKernel_hook(
 	    PrintThread{} << timestamp << " hook" << get_id() << "before loop" << *current_process << std::endl;
         free(timestamp);
 #endif
+        // https://www.boost.org/doc/libs/1_63_0/doc/html/thread/synchronization.html#thread.synchronization.condvar_ref
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         while(*current_process == 1) {
 #ifdef _VERBOSE_WENQING
