@@ -4,7 +4,7 @@ import json
 import os
 import signal
 import sys
-from time import CLOCK_REALTIME, clock_gettime_ns, perf_counter_ns, sleep
+from time import perf_counter_ns, sleep
 import cv2
 import numpy as np
 import torch
@@ -14,7 +14,6 @@ from utils import read_json_file
 
 # Wenqing: Import an ad-hoc iFPC injected c++ set mem
 from ctypes import cdll
-# lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
 
 
 RUNNING = True
@@ -33,7 +32,8 @@ def read_img(img_path: str):
 
 
 class SchedulerTester():
-    def __init__(self, control, config, resize=False, resize_size=(1440, 2560)) -> None:
+    def __init__(self, control, config, device_id, resize=False, resize_size=(1440, 2560)) -> None:
+        self.device_id = device_id
         self.control = control
         self.priority = config['priority']
         if self.control and self.priority > 0:
@@ -81,14 +81,18 @@ class SchedulerTester():
             self.config['output_file_name'] + ".csv")
         self.csv_fh = open(csv_filename, 'w')
         self.csv_writer = csv.writer(self.csv_fh, lineterminator='\n')
-        self.csv_writer.writerow(['start_timestamp_ns', 'end_timestamp_ns', 'jct_ms'])
+
+        # https://pytorch.org/docs/stable/notes/cuda.html#memory-management
+        self.csv_writer.writerow(
+            ['start_timestamp_ns', 'end_timestamp_ns', 'jct_ms',
+             'max_allocated_gpu_memory_allocated_byte',
+             'max_reserved_gpu_memory_byte'])
 
     def __del__(self):
         self.csv_fh.flush()
         self.csv_fh.close()
 
     def infer(self):
-        # print(f"starting inference, idx: {self.idx} at {int(time.time() * 1000000000) // 1000 % 100000000 / 1000.0}")
         res = None # res :torch.Tensor
         if self.control and self.priority > 0:
             try:
@@ -106,9 +110,11 @@ class SchedulerTester():
                 print(e)
             # read and print shared memory's current value
             # lib.printCurr()
-        self.csv_writer.writerow([start_t, end_t,
-            # [clock_gettime_ns(CLOCK_REALTIME),
-             (end_t - start_t) / 1000000])
+        max_alloc_mem_byte = torch.cuda.max_memory_allocated(self.device_id)
+        max_rsrv_mem_byte = torch.cuda.max_memory_reserved(self.device_id)
+        self.csv_writer.writerow([
+            start_t, end_t, (end_t - start_t) / 1000000, max_alloc_mem_byte,
+            max_rsrv_mem_byte])
         self.csv_fh.flush()
         return res
 
@@ -148,8 +154,8 @@ def main():
         print(f"Invalid input file.", file=sys.stderr)
         sys.exit(1)
 
-    # tester: SchedulerTester = SchedulerTester(0)
-    tester: SchedulerTester = SchedulerTester(data['control']['control'], data)
+    tester: SchedulerTester = SchedulerTester(
+        data['control']['control'], data, device_id)
     sleep(1)
     tester.run()
 
