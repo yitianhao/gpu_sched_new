@@ -25,7 +25,7 @@ def parse_args():
                         choices=("sync", "event_group"),
                         help='Prefix of folder name.')
     # parser.add_argument('--round', type=int, default=1,
-    #                     help='Number of rounds of experiments.')
+    #                     help='Number of rounds of experiments.')plot_
 
     parser.add_argument('--model-A-profile', type=str, default=None,
                         help='Profile of model A')
@@ -47,7 +47,7 @@ def prepare_file_paths(log_dir, prefix, sync):
 
     model_B_log = os.path.join(parent_folder, "model_B.csv")
     if not os.path.exists(model_B_log):
-        raise ValueError("Cannot find model_B_log, {model_B_log}")
+        raise ValueError(f"Cannot find model_B_log, {model_B_log}")
 
     model_pid = os.path.join(parent_folder, "models_pid.json")
 
