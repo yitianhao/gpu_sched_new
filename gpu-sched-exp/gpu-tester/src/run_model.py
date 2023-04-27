@@ -50,6 +50,7 @@ class SchedulerTester():
             os.environ['RESIZE'] = "true"
         model_name = self.config['model_name']
         model_weight = self.config['model_weight']
+        batch_size = self.config['batch_size'] if 'batch_size' in self.config else 1
         if (getattr(torchvision.models.segmentation, model_weight, False)):
             # a model from torchvision.models.segmentation
             self.weights= getattr(torchvision.models.segmentation, model_weight).DEFAULT
@@ -67,14 +68,16 @@ class SchedulerTester():
             #No resize FasterRCNN_ResNet50 720
             self.model_preprocess = self.weights.transforms()
             img_path = self.config['input_file_path']
-            self.img: torch.Tensor =\
-                self.model_preprocess(read_img(img_path)).unsqueeze(0).cuda()
+            img = self.model_preprocess(read_img(img_path)).unsqueeze(0)
+            img = torch.cat([img] * batch_size)
+            self.img: torch.Tensor = img.cuda()
         else:
             self.model_preprocess = self.weights.transforms()
             img_path = self.config['input_file_path']
             i = read_img(img_path).unsqueeze(0)
             i = F.interpolate(i, self.resize_size)
-            self.img: torch.Tensor = i.cuda()
+            img = torch.cat([i] * batch_size)
+            self.img: torch.Tensor = img.cuda()
         os.makedirs(self.config['output_file_path'], exist_ok=True)
         csv_filename = os.path.join(
             self.config['output_file_path'],
