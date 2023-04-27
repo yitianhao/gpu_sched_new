@@ -18,7 +18,8 @@
 					"sync": 1,
 					"event_group": 2
 				}
-			}
+			},
+			"batch_size": 1,
 		},
 		{
 			"model_name": "fasterrcnn_resnet50_fpn",
@@ -38,7 +39,8 @@
 					"sync": 0,
 					"event_group": 2
 				}
-			}
+			},
+			"batch_size": 1,
 		}
 	],
 	"exp_dur": 30,
