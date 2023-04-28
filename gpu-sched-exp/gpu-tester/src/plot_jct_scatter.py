@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os
 import numpy as np
 import matplotlib
@@ -25,7 +26,7 @@ def parse_args():
                         choices=("sync", "event_group"),
                         help='Prefix of folder name.')
     # parser.add_argument('--round', type=int, default=1,
-    #                     help='Number of rounds of experiments.')
+    #                     help='Number of rounds of experiments.')plot_
 
     parser.add_argument('--model-A-profile', type=str, default=None,
                         help='Profile of model A')
@@ -47,7 +48,7 @@ def prepare_file_paths(log_dir, prefix, sync):
 
     model_B_log = os.path.join(parent_folder, "model_B.csv")
     if not os.path.exists(model_B_log):
-        raise ValueError("Cannot find model_B_log, {model_B_log}")
+        raise ValueError(f"Cannot find model_B_log, {model_B_log}")
 
     model_pid = os.path.join(parent_folder, "models_pid.json")
 
@@ -96,6 +97,7 @@ def main():
 
     xvals, xerrs = [], []
     yvals, yerrs = [], []
+    xerrs_abs, yerrs_abs = [], []
     yvals_filtered, yerrs_filtered = [], []
     model_A_name, model_B_name = "", ""
     texts = []
@@ -114,21 +116,24 @@ def main():
         yvals_filtered.append(np.mean(model_A_log_filtered['jct_ms']))
         if is_relative:
             yerrs.append(sem((jcts - avg_model_A_profiled_jct) / avg_model_A_profiled_jct))
-            yerrs_filtered.append(sem((model_A_log_filtered['jct_ms'] - avg_model_A_profiled_jct) / avg_model_A_profiled_jct))
+            yerrs_filtered.append(sem(model_A_log_filtered['jct_ms']))
+            yerrs_abs.append(sem(jcts))
         else:
             yerrs.append(sem(jcts))
-            yerrs_filtered.append(sem(model_A_log_filtered['jct_ms']))
 
         jcts = model_B_log['jct_ms']
         model_B_name = exp_pids[1][0]
         xvals.append(np.mean(jcts))
         if is_relative:
             xerrs.append(sem((jcts - avg_model_B_profiled_jct) / avg_model_B_profiled_jct))
+            xerrs_abs.append(sem(jcts))
         else:
             xerrs.append(sem(jcts))
 
         texts.append(f"sync={sync}")
 
+    yvals_abs = copy.deepcopy(yvals_filtered)
+    xvals_abs = copy.deepcopy(xvals)
     if is_relative:
         xvals = (np.array(xvals) - avg_model_B_profiled_jct) / avg_model_B_profiled_jct
         yvals = (np.array(yvals) - avg_model_A_profiled_jct) / avg_model_A_profiled_jct
@@ -136,9 +141,14 @@ def main():
 
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
-    title = ""
-    draw_subplot(axes[0], xvals, yvals, xerrs, yerrs, texts,
-                 model_A_name, model_B_name, is_relative, title)
+    # uncomment to get all mdoel_A jcts
+    # title = ""
+    # draw_subplot(axes[0], xvals, yvals, xerrs, yerrs, texts,
+    #              model_A_name, model_B_name, is_relative, title)
+
+    title = "Filtered jobs in collision"
+    draw_subplot(axes[0], xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, texts,
+                 model_A_name, model_B_name, False, title)
 
     title = "Filtered jobs in collision"
     draw_subplot(axes[1], xvals, yvals_filtered, xerrs, yerrs_filtered, texts,
