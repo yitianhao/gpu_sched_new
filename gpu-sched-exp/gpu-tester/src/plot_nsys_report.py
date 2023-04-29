@@ -26,13 +26,13 @@ def compute_queue(start, end):
     j = 0
 
     while i < len(start) and j < len(end):
-        if start.iloc[i] < end.iloc[j]:
-            ts.append(start.iloc[i])
+        if start[i] < end[j]:
+            ts.append(start[i])
             num_kernels_queued.append(num_kernel_queued)
             num_kernel_queued += 1
             i += 1
         else:
-            ts.append(end.iloc[j])
+            ts.append(end[j])
             num_kernel_queued -= 1
             num_kernels_queued.append(num_kernel_queued)
             j += 1
@@ -78,8 +78,8 @@ def main():
 
     if args.pids is None:
         fig, axes = plt.subplots(2, 1, figsize=(10, 12))
-        start = df['API Start (ns)']
-        end = df['Kernel End (ns)']
+        start = df['API Start (ns)'].tolist()
+        end = df['Kernel End (ns)'].tolist()
         ts, num_kernels_queued = compute_queue(start, end)
 
         ax = axes[0]
@@ -108,8 +108,8 @@ def main():
     fig, axes = plt.subplots(4, 1, figsize=(24, 12))
 
     ax = axes[0]
-    start = df['API Start (ns)']
-    end = df['Kernel End (ns)']
+    start = df['API Start (ns)'].tolist()
+    end = df['Kernel End (ns)'].tolist()
     ts, num_kernels_queued = compute_queue(start, end)
 
     ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued)
