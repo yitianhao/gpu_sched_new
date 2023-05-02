@@ -1,5 +1,4 @@
 import argparse
-import copy
 import os
 import numpy as np
 import matplotlib
@@ -82,23 +81,21 @@ def main():
     args = parse_args()
     if args.model_A_profile:
         model_A_profile = parse_log(args.model_A_profile)
-        avg_model_A_profiled_jct = np.mean(model_A_profile['jct_ms'])
-        # avg_model_A_profiled_jct = np.mean(get_jcts_from_profile(args.model_A_profile))
+        avg_model_A_prof_jct = np.mean(model_A_profile['jct_ms'])
+        # avg_model_A_prof_jct = np.mean(get_jcts_from_profile(args.model_A_profile))
     else:
-        avg_model_A_profiled_jct = None
+        avg_model_A_prof_jct = None
     if args.model_B_profile:
         model_B_profile = parse_log(args.model_B_profile)
-        avg_model_B_profiled_jct = np.mean(model_B_profile['jct_ms'])
-        # avg_model_B_profiled_jct = np.mean(get_jcts_from_profile(args.model_B_profile))
+        avg_model_B_prof_jct = np.mean(model_B_profile['jct_ms'])
+        # avg_model_B_prof_jct = np.mean(get_jcts_from_profile(args.model_B_profile))
     else:
-        avg_model_B_profiled_jct = None
-    is_relative = avg_model_A_profiled_jct is not None and \
-        avg_model_B_profiled_jct is not None
+        avg_model_B_prof_jct = None
+    is_relative = avg_model_A_prof_jct is not None and \
+        avg_model_B_prof_jct is not None
 
-    xvals, xerrs = [], []
-    yvals, yerrs = [], []
-    xerrs_abs, yerrs_abs = [], []
-    yvals_filtered, yerrs_filtered = [], []
+    xvals, xerrs, yvals, yerrs  = [], [], [], []
+    xvals_abs, xerrs_abs, yvals_abs, yerrs_abs = [], [], [], []
     model_A_name, model_B_name = "", ""
     texts = []
     for sync in args.syncs:
@@ -108,50 +105,41 @@ def main():
         exp_pids = read_json_file(model_pid)
         model_A_log = parse_log(model_A_log_fname)
         model_B_log = parse_log(model_B_log_fname)
-        model_A_log_filtered = filter_log(model_A_log, model_B_log)
+        model_A_log = filter_log(model_A_log, model_B_log)
 
         jcts = model_A_log['jct_ms']
         model_A_name = exp_pids[0][0]
-        yvals.append(np.mean(jcts))
-        yvals_filtered.append(np.mean(model_A_log_filtered['jct_ms']))
+        yvals_abs.append(np.mean(jcts))
+        yerrs_abs.append(sem(jcts))
         if is_relative:
-            yerrs.append(sem((jcts - avg_model_A_profiled_jct) / avg_model_A_profiled_jct))
-            yerrs_filtered.append(sem(model_A_log_filtered['jct_ms']))
-            yerrs_abs.append(sem(jcts))
+            yvals.append((np.mean(jcts) - avg_model_A_prof_jct) / avg_model_A_prof_jct)
+            yerrs.append(sem((jcts - avg_model_A_prof_jct) / avg_model_A_prof_jct))
         else:
+            yvals.append(np.mean(jcts))
             yerrs.append(sem(jcts))
 
         jcts = model_B_log['jct_ms']
         model_B_name = exp_pids[1][0]
-        xvals.append(np.mean(jcts))
+        xvals_abs.append(np.mean(jcts))
+        xerrs_abs.append(sem(jcts))
         if is_relative:
-            xerrs.append(sem((jcts - avg_model_B_profiled_jct) / avg_model_B_profiled_jct))
-            xerrs_abs.append(sem(jcts))
+            xvals.append((np.mean(jcts) - avg_model_B_prof_jct) / avg_model_B_prof_jct)
+            xerrs.append(sem((jcts - avg_model_B_prof_jct) / avg_model_B_prof_jct))
         else:
+            xvals.append(np.mean(jcts))
             xerrs.append(sem(jcts))
 
         texts.append(f"sync={sync}")
 
-    yvals_abs = copy.deepcopy(yvals_filtered)
-    xvals_abs = copy.deepcopy(xvals)
-    if is_relative:
-        xvals = (np.array(xvals) - avg_model_B_profiled_jct) / avg_model_B_profiled_jct
-        yvals = (np.array(yvals) - avg_model_A_profiled_jct) / avg_model_A_profiled_jct
-        yvals_filtered = (np.array(yvals_filtered) - avg_model_A_profiled_jct) / avg_model_A_profiled_jct
-
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-
-    # uncomment to get all mdoel_A jcts
-    # title = ""
-    # draw_subplot(axes[0], xvals, yvals, xerrs, yerrs, texts,
-    #              model_A_name, model_B_name, is_relative, title)
 
     title = "Filtered jobs in collision"
     draw_subplot(axes[0], xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, texts,
                  model_A_name, model_B_name, False, title)
+    # axes[0].plot(44.7, 110.1, "o")
 
     title = "Filtered jobs in collision"
-    draw_subplot(axes[1], xvals, yvals_filtered, xerrs, yerrs_filtered, texts,
+    draw_subplot(axes[1], xvals, yvals, xerrs, yerrs, texts,
                  model_A_name, model_B_name, is_relative, title)
 
     fig.set_tight_layout(True)
