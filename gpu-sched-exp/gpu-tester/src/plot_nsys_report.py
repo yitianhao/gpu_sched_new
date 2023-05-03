@@ -121,8 +121,8 @@ def main():
     ax = axes[1]
     mask = df['PID'] == model_A_pid
 
-    start = df[mask]['API Start (ns)']
-    end = df[mask]['Kernel End (ns)']
+    start = df[mask]['API Start (ns)'].tolist()
+    end = df[mask]['Kernel End (ns)'].tolist()
     ts, num_kernels_queued = compute_queue(start, end)
 
     ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued)
