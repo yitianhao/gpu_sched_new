@@ -72,12 +72,15 @@ def main():
             process_env['CGROUP_DIR'] = "../alnair"
             process_env['ID'] = str(model['priority'])
             process_env['UTIL_LOG_PATH'] = "sched_tester2_sm_util.log"
-            process_env['LD_PRELOAD'] = "../intercept-lib/build/lib/libcuinterpose.so"
+            process_env['LD_PRELOAD'] = os.path.join(
+                "../intercept-lib/build/lib/libcuinterpose.so")
         if (control and controlSync):
-            process_env['LD_PRELOAD'] = "../intercept-lib/build/lib/libcuinterpose_sync.so"
+            process_env['LD_PRELOAD'] = os.path.abspath(
+                "../intercept-lib/build/lib/libcuinterpose_sync.so")
             process_env['SYNC_KERNELS'] = str(model['control']['queue_limit']['sync'])
         if (control and controlEvent):
-            process_env['LD_PRELOAD'] = "../intercept-lib/build/lib/libcuinterpose_event.so"
+            process_env['LD_PRELOAD'] = os.path.abspath(
+                "../intercept-lib/build/lib/libcuinterpose_event.so")
             process_env['EVENT_GROUP_SIZE'] = str(model['control']['queue_limit']['event_group'])
 
         #run each model as a process
