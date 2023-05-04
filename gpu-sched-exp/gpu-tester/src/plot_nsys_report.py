@@ -19,6 +19,8 @@ def cdf(data):
     return x, y
 
 def compute_queue(start, end):
+    start = sorted(start)
+    end = sorted(end)
     ts = []
     num_kernel_queued = 0
     num_kernels_queued = []
@@ -63,12 +65,6 @@ def main():
     df['Queue Dur (ns)'].replace('None', np.nan, inplace=True)
     df['Queue Dur (ns)'] = df['Queue Dur (ns)'].astype(float)
 
-    # the earliest timestamp in report csv
-    # minus it to shift time axis to 0
-    start_t = df['API Start (ns)'].min()
-    df['API Start (ns)'] -= start_t
-    df['Queue Start (ns)'] -= start_t
-    df['Kernel Start (ns)'] -= start_t
     df['API End (ns)'] = df['API Start (ns)'] + df['API Dur (ns)']
     df['Kernel End (ns)'] = df['Kernel Start (ns)'] + df['Kernel Dur (ns)']
     df['End (ns)'] = df['API Start (ns)'] + df['Total Dur (ns)']
@@ -104,15 +100,17 @@ def main():
     experiment_pids = read_json_file(args.pids)
     model_A_name, model_A_pid = experiment_pids[0]
     model_B_name, model_B_pid = experiment_pids[1]
+    model_A_color = 'C0'
+    model_B_color = 'C3'
 
-    fig, axes = plt.subplots(4, 1, figsize=(24, 12))
+    fig, axes = plt.subplots(6, 1, figsize=(24, 18))
 
     ax = axes[0]
     start = df['API Start (ns)'].tolist()
     end = df['Kernel End (ns)'].tolist()
     ts, num_kernels_queued = compute_queue(start, end)
 
-    ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued)
+    ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued, color='k')
     ax.set_ylabel('Num of kernels in queue')
     ax.set_xlabel('Time (s)')
     ax.set_xlim(t_min, t_max)
@@ -121,43 +119,76 @@ def main():
     ax = axes[1]
     mask = df['PID'] == model_A_pid
 
-    start = df[mask]['API Start (ns)']
-    end = df[mask]['Kernel End (ns)']
+    start = df[mask]['API Start (ns)'].tolist()
+    end = df[mask]['Kernel End (ns)'].tolist()
     ts, num_kernels_queued = compute_queue(start, end)
 
-    ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued)
-    ax.set_ylabel(f'Num of {model_A_name} kernels in queue')
+    ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued, color=model_A_color)
+    ax.set_ylabel(f'Num of queued kernels\n{model_A_name}')
     ax.set_xlabel('Time (s)')
     ax.set_xlim(t_min, t_max)
     ax.set_ylim(0, )
 
     ax = axes[2]
+    ax.scatter(df[mask]['Queue Start (ns)'] / SEC_IN_NS,
+               df[mask]['Queue Dur (ns)'] / SEC_IN_NS * SEC_IN_MS,
+               c=model_A_color, marker='.')
+    ax.set_ylabel(f'Queue Delay (ms)\nof {model_A_name}')
+    ax.set_xlabel('Time (s)')
+    ax.set_xlim(t_min, t_max)
+    ax.set_ylim(0, )
+
+    ax = axes[3]
+    mask = df['PID'] == model_B_pid
+
+    start = df[mask]['API Start (ns)'].tolist()
+    end = df[mask]['Kernel End (ns)'].tolist()
+    ts, num_kernels_queued = compute_queue(start, end)
+
+    ax.step(np.array(ts) / SEC_IN_NS, num_kernels_queued, color=model_B_color)
+    ax.set_ylabel(f'Num of queued kernels \n{model_B_name}')
+    ax.set_xlabel('Time (s)')
+    ax.set_xlim(t_min, t_max)
+    ax.set_ylim(0, )
+
+    ax = axes[4]
+    ax.scatter(df[mask]['Queue Start (ns)'] / SEC_IN_NS,
+               df[mask]['Queue Dur (ns)'] / SEC_IN_NS * SEC_IN_MS,
+               c=model_B_color, marker='.')
+    ax.set_ylabel(f'Queue Delay (ms)\nof {model_B_name}')
+    ax.set_xlabel('Time (s)')
+    ax.set_xlim(t_min, t_max)
+    ax.set_ylim(0, )
+
+    ax = axes[5]
     mask = df['PID'] == model_B_pid
     lines = []
     for start, end in zip(df[mask]['API Start (ns)'], df[mask]['End (ns)']):
-        lines.append([(start / SEC_IN_NS, 1), (end / SEC_IN_NS, 1)])
+        lines.append([(start / SEC_IN_NS, 0.5), (end / SEC_IN_NS, 0.5)])
 
-    lc = mc.LineCollection(lines, colors='k', linewidths=2)
+    lc = mc.LineCollection(lines, colors=model_B_color, linewidths=4)
     ax.add_collection(lc)
     ax.autoscale()
     ax.margins(0.1)
     ax.set_ylim(0, 1.1)
     ax.set_xlim(t_min, t_max)
-    ax.set_ylabel("Job arrival of {}".format(model_B_name))
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel("Job arrival\nof {}".format(model_B_name), color=model_B_color)
+    ax.set_yticks([])
 
-    ax = axes[3]
+    ax = ax.twinx()
     mask = df['PID'] == model_A_pid
     lines = []
     for start, end in zip(df[mask]['API Start (ns)'], df[mask]['End (ns)']):
         lines.append([(start / SEC_IN_NS, 1), (end/SEC_IN_NS, 1)])
 
-    lc = mc.LineCollection(lines, colors='k', linewidths=2)
+    lc = mc.LineCollection(lines, colors=model_A_color, linewidths=4)
     ax.add_collection(lc)
     ax.autoscale()
     ax.margins(0.1)
     ax.set_ylim(0, 1.1)
-    ax.set_xlim(t_min, t_max)
-    ax.set_ylabel("Job arrival of {}".format(model_A_name))
+    ax.set_yticks([])
+    ax.set_ylabel("Job arrival\nof {}".format(model_A_name), color=model_A_color)
     # ax.set_title('sync = {}'.format(sync))
 
     fig.set_tight_layout(True)
