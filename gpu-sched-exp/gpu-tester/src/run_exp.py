@@ -55,7 +55,6 @@ def main():
     for i, model_file in enumerate(model_files):
         # Run src/run_model.py with current model configuration
         model = models[i]
-        model_name = model['model_name']
         # logging
         logfilename = os.path.join(
             model['output_file_path'], f"{model['output_file_name']}.log")
@@ -83,16 +82,30 @@ def main():
                 "../intercept-lib/build/lib/libcuinterpose_event.so")
             process_env['EVENT_GROUP_SIZE'] = str(model['control']['queue_limit']['event_group'])
 
-        #run each model as a process
-        model_process = subprocess.Popen(
-            ['python', 'src/run_model.py', model_file.name,
-             str(experiment_config.get('device_id'))], stdout=logfile,
-             stderr=logfile, env=process_env)
-        #record model's PID
-        if model['resize'] == True:
-            model_pids.append((f"{model_name}_{str(model['resize_size'][0])}", model_process.pid))
+        # run each model as a process
+        if 'codegen' in model['model_name']:
+            cmd = [model['python_path'],
+                   '-m', 'jaxformer.hf.sample',
+                   '--model', model['model_weight'],
+                   '--context', '"def hello_world():"',
+                   '--batch-size', str(model['batch_size']),
+                   '--max-length', '2',
+                   '--device', 'cuda:' + str(experiment_config["device_id"]),
+                   '--output_file_path',
+                   os.path.abspath(model['output_file_path']),
+                   '--output_file_name', model['output_file_name']]
+            cwd = model['repo_path']
         else:
-            model_pids.append((model_name, model_process.pid))
+            cmd = ['python', 'src/run_model.py', model_file.name,
+                   str(experiment_config.get('device_id'))]
+            cwd = '.'
+        model_process = subprocess.Popen(
+            cmd, cwd=cwd, stdout=logfile,
+            stderr=logfile, env=process_env)
+        # record model's PID
+        model_name = f"{model['model_name']}_{str(model['resize_size'][0])}" \
+            if model['resize'] else model['model_name']
+        model_pids.append((model_name, model_process.pid))
         model_processes.append(model_process)
 
     #Stop each model at given experiment duration exhausted
