@@ -99,8 +99,11 @@ def main():
     model_A_name, model_B_name = "", ""
     texts = []
     for sync in args.syncs:
-        model_A_log_fname, model_B_log_fname, model_pid = prepare_file_paths(
-            args.log_dir, args.prefix, sync)
+        try:
+            model_A_log_fname, model_B_log_fname, model_pid = prepare_file_paths(
+                args.log_dir, args.prefix, sync)
+        except ValueError:
+            continue
 
         exp_pids = read_json_file(model_pid)
         model_A_log = parse_log(model_A_log_fname)
