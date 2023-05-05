@@ -3,9 +3,15 @@ import os
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
+import matplotlib.collections as mc
 import matplotlib.pyplot as plt
 from utils import parse_log, read_json_file, sem
 
+SEC_IN_NS = 1e9
+SEC_IN_MS = 1e3
+
+COLORS = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray',
+          'olive', 'cyan', 'black', 'navy', 'yellow', 'dark green']
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -77,6 +83,42 @@ def filter_log(model_A_log, model_B_log):
         mask = mask & (m1 | m2)
     return model_A_log[mask]
 
+def plot_job_arrival(model_A_log, model_B_log, model_A_name, model_B_name, save_dir):
+    model_A_color = 'C0'
+    model_B_color = 'C3'
+    fig = plt.figure(figsize=(24, 8))
+    ax = plt.gca()
+    lines = []
+    for start, end in zip(
+        model_A_log['start_timestamp_ns'], model_A_log['end_timestamp_ns']):
+        lines.append([(start / SEC_IN_NS, 1), (end / SEC_IN_NS, 1)])
+    lc = mc.LineCollection(lines, colors=model_A_color, linewidths=4)
+    ax.add_collection(lc)
+    ax.autoscale()
+    ax.margins(0.1)
+    ax.set_ylim(0, 1.1)
+    ax.set_yticks([])
+    ax.set_ylabel("Job arrival\nof {}".format(model_A_name), color=model_A_color)
+    ax.vlines(x=model_A_log['end_timestamp_ns'] / SEC_IN_NS, ymin=0, ymax = 1, colors='k', ls='--')
+
+    lines = []
+    for start, end in zip(model_B_log['start_timestamp_ns'], model_B_log['end_timestamp_ns']):
+        lines.append([(start / SEC_IN_NS, 0.5), (end / SEC_IN_NS, 0.5)])
+    lc = mc.LineCollection(lines, colors=model_B_color, linewidths=4)
+    ax = ax.twinx()
+    ax.add_collection(lc)
+    ax.autoscale()
+    ax.margins(0.1)
+    ax.set_ylim(0, 1.1)
+    # ax.set_xlim(0, t_max)
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel("Job arrival\nof {}".format(model_B_name), color=model_B_color)
+    ax.set_yticks([])
+    fig.set_tight_layout(True)
+    fig.savefig(os.path.join(save_dir, 'job_arrival.jpg'), bbox_inches='tight')
+    plt.close()
+
+
 def main():
     args = parse_args()
     if args.model_A_profile:
@@ -108,10 +150,20 @@ def main():
         exp_pids = read_json_file(model_pid)
         model_A_log = parse_log(model_A_log_fname)
         model_B_log = parse_log(model_B_log_fname)
-        model_A_log = filter_log(model_A_log, model_B_log)
+        exp_config = read_json_file(os.path.join(os.path.dirname(model_A_log_fname), 'exp_config.json'))
+        model_A_batch_size = exp_config['models'][0]['batch_size']
+        model_A_name = exp_pids[0][0] + '_batch_size_' + str(model_A_batch_size)
+        model_B_name = exp_pids[1][0]
+        plot_job_arrival(model_A_log, model_B_log, model_A_name, model_B_name,
+                         os.path.dirname(model_A_log_fname))
+        model_A_log_filtered = filter_log(model_A_log, model_B_log)
+        suptitle = "Including jobs in collision"
+        if len(model_A_log_filtered) > 0:
+            suptitle = "Filtered jobs in collision"
+            model_A_log = model_A_log_filtered
+
 
         jcts = model_A_log['jct_ms']
-        model_A_name = exp_pids[0][0]
         yvals_abs.append(np.mean(jcts))
         yerrs_abs.append(sem(jcts))
         if is_relative:
@@ -122,7 +174,6 @@ def main():
             yerrs.append(sem(jcts))
 
         jcts = model_B_log['jct_ms']
-        model_B_name = exp_pids[1][0]
         xvals_abs.append(np.mean(jcts))
         xerrs_abs.append(sem(jcts))
         if is_relative:
@@ -136,17 +187,17 @@ def main():
 
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
-    title = "Filtered jobs in collision"
+    title = ""
     draw_subplot(axes[0], xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, texts,
                  model_A_name, model_B_name, False, title)
     # axes[0].plot(44.7, 110.1, "o")
-
-    title = "Filtered jobs in collision"
     draw_subplot(axes[1], xvals, yvals, xerrs, yerrs, texts,
                  model_A_name, model_B_name, is_relative, title)
 
+    fig.suptitle(suptitle)
+
     fig.set_tight_layout(True)
-    fig.savefig(os.path.join(args.log_dir, "jct_scatter_plot.jpg"))
+    fig.savefig(os.path.join(args.log_dir, "jct_scatter_plot.jpg"), bbox_inches='tight')
 
 if __name__ == '__main__':
     main()
