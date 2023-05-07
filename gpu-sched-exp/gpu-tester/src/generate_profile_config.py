@@ -1,9 +1,15 @@
+import argparse
 import copy
 import os
 
 from utils import write_json_file
 
 MODEL_NAMES = {
+    "nlp": [
+        "codegen",
+        # "gpt2",
+        # "bert",
+    ],
     "detection": [
         "fasterrcnn_resnet50_fpn",
         "keypointrcnn_resnet50_fpn",
@@ -103,6 +109,11 @@ MODEL_NAMES = {
 
 
 MODEL_WEIGHTS = {
+    "nlp": [
+        "codegen-350M-mono",
+        # "gpt2",
+        # "bert",
+    ],
     "detection": [
         "FasterRCNN_ResNet50_FPN_Weights",
         "KeypointRCNN_ResNet50_FPN_Weights",
@@ -208,11 +219,11 @@ TEMPLATE = {
     "output_file_path": "./profiles/detection/",
     "output_file_name": "fasterrcnn_resnet50_fpn_720x1280_sleep_time_0",
     "priority": 0,
-    "resize": False,
-    "resize_size": [
-        720,
-        1280
-    ],
+    # "resize": False,
+    # "resize_size": [
+    #     720,
+    #     1280
+    # ],
     "control": {
         "control": False,
         "controlsync": False,
@@ -225,29 +236,48 @@ TEMPLATE = {
     "batch_size": 1
 }
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--config-save-dir', type=str, required=True, help='')
+    parser.add_argument('--profile-save-dir', type=str, required=True, help='')
+    parser.add_argument('--workload', type=str, default="detection",
+                        choices=("detection", "nlp", "classification",
+                                 "segmentation"), help='Workload')
+    parser.add_argument('--batch', type=int, default=1, help='Batch size.')
+    parser.add_argument('--sleep-time', type=int, default=0,
+                        help='Job arrival interval. (second)')
+    parser.add_argument('--python-path', type=str, default="python",
+                        help='Python binary path.')
+    parser.add_argument('--repo-path', type=str, default=".",
+                        help='Repository path.')
+    return parser.parse_args()
+
 
 def main():
-    # workload = 'detection'
-    workload = 'classification'
+    args = parse_args()
     for model_name, model_weight in zip(
-        MODEL_NAMES[workload], MODEL_WEIGHTS[workload]):
+        MODEL_NAMES[args.workload], MODEL_WEIGHTS[args.workload]):
         # print(model_name, model_weight)
         config = copy.deepcopy(TEMPLATE)
         config["model_name"] = model_name
         config["model_weight"] = model_weight
-        w, h = TEMPLATE["resize_size"]
-        # w, h = 1440, 2560
-        config["resize_size"] = [w, h]
-        config["resize"] = True
-        sleep_time = 0  # template['sleep_time']
-        config["sleep_time"] = sleep_time
-        batch = 1
-        config['batch_size'] = batch
-        name = f"{model_name}_{w}x{h}_sleep_time_{sleep_time}_batch_{batch}"
+        config["sleep_time"] = args.sleep_time
+        config['batch_size'] = args.batch
+        if args.workload == 'nlp':
+            name = f"{model_name}_sleep_time_{args.sleep_time}_batch_{args.batch}"
+            config['python_path'] = args.python_path
+            config['repo_path'] = args.repo_path
+        else:
+            w, h = 720, 1280
+            config["resize_size"] = [w, h]
+            config["resize"] = True
+            name = f"{model_name}_{w}x{h}_sleep_time_{args.sleep_time}_batch_{args.batch}"
         config["output_file_name"] = name
-        config["output_file_path"] = f"./nsys_profiles/{workload}/{name}"
+        config["output_file_path"] = os.path.join(args.profile_save_dir, f"{args.workload}/{name}")
 
-        folder = f"./nsys_profile_configs/{workload}/"
+        folder = os.path.join(args.config_save_dir, f"{args.workload}")
         os.makedirs(folder, exist_ok=True)
 
         write_json_file(os.path.join(folder, f"{name}.json"), config)
