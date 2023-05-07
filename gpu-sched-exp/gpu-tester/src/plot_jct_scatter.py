@@ -11,7 +11,7 @@ SEC_IN_NS = 1e9
 SEC_IN_MS = 1e3
 
 COLORS = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray',
-          'olive', 'cyan', 'black', 'navy', 'yellow', 'dark green']
+          'olive', 'cyan', 'black', 'navy', 'yellow']
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -61,7 +61,8 @@ def prepare_file_paths(log_dir, prefix, sync):
 
 def draw_subplot(ax, xvals, yvals, xerrs, yerrs, texts, model_A_name,
                  model_B_name, is_relative, title):
-    ax.errorbar(xvals, yvals, yerr=yerrs, xerr=xerrs, fmt='o')
+    ax.errorbar(xvals, yvals, yerr=yerrs, xerr=xerrs, color='none', ecolor=COLORS)
+    ax.scatter(xvals, yvals, marker='o', color=COLORS)
     for x, y, text in zip(xvals, yvals, texts):
         ax.annotate(text, (x, y))
     if is_relative:
