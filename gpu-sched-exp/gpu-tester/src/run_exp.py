@@ -93,7 +93,7 @@ def main():
                    '--device', 'cuda:' + str(experiment_config["device_id"]),
                    '--output_file_path',
                    os.path.abspath(model['output_file_path']),
-                   '--output_file_name', model['output_file_name']]
+                   '--output_file_name', model['output_file_name'], '--control', '--priority', str(model['priority'])]
             cwd = model['repo_path']
         else:
             cmd = ['python', 'src/run_model.py', model_file.name,
