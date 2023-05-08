@@ -1,5 +1,9 @@
 from transformers import pipeline
 
+def data():
+    for i in range(1000):
+        yield f"My example {i}"
+
 class TransformerModel:
     def __init__(self, config, device_id) -> None:
         self.config = config

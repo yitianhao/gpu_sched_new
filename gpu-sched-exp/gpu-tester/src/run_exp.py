@@ -71,8 +71,8 @@ def main():
             process_env['CGROUP_DIR'] = "../alnair"
             process_env['ID'] = str(model['priority'])
             process_env['UTIL_LOG_PATH'] = "sched_tester2_sm_util.log"
-            process_env['LD_PRELOAD'] = os.path.join(
-                "../intercept-lib/build/lib/libcuinterpose.so")
+            process_env['LD_PRELOAD'] = os.path.abspath(os.path.join(
+                "../intercept-lib/build/lib/libcuinterpose.so"))
         if (control and controlSync):
             process_env['LD_PRELOAD'] = os.path.abspath(
                 "../intercept-lib/build/lib/libcuinterpose_sync.so")
