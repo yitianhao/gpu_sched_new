@@ -35,7 +35,7 @@ class SchedulerTester():
 
         try:
             self.model = VisionModel(self.config, self.device_id)
-        except ValueError:
+        except (ValueError, KeyError):
             self.model = None
         if self.model is None:
             try:

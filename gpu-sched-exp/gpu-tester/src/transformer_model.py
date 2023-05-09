@@ -8,10 +8,16 @@ class TransformerModel:
     def __init__(self, config, device_id) -> None:
         self.config = config
 
-        batch_size = self.config['batch_size'] if 'batch_size' in self.config else 1
+        batch_size = self.config.get('batch_size', 1)
+        # self.generator = pipeline(
+        #     model=self.config['model_name'], device=device_id,
+        #     batch_size=batch_size)
         self.generator = pipeline(
-            model=self.config['model_name'], device=device_id,
-            batch_size=batch_size)
+            task='text-generation', model='../transformer_cache/gpt2',
+            device=device_id, batch_size=batch_size)
+        self.generator.tokenizer.pad_token_id = self.generator.model.config.eos_token_id
+        self.pip_iter = self.generator(data())
 
     def __call__(self):
-        return self.generator("hello world")
+        # return self.generator("hello world")
+        next(iter(self.pip_iter))
