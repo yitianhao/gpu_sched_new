@@ -44,9 +44,12 @@ static string username(getenv("USER"));
 static string shm_name("MySharedMemory_" + username);
 static string named_mtx_name("named_mutex_" + username);
 static string named_cnd_name("named_cnd_" + username);
-static boost::interprocess::shared_memory_object shm(
-    boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_only);
-static boost::interprocess::mapped_region region(shm, boost::interprocess::read_only);
+
+static std::shared_ptr<boost::interprocess::shared_memory_object> shm_ptr;
+static std::shared_ptr<boost::interprocess::mapped_region> region_ptr;
+// static boost::interprocess::shared_memory_object shm(
+//     boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_only);
+// static boost::interprocess::mapped_region region(shm, boost::interprocess::read_only);
 static boost::interprocess::named_mutex named_mtx(
     boost::interprocess::open_only, named_mtx_name.c_str());
 static boost::interprocess::named_condition named_cnd(
@@ -61,8 +64,14 @@ void init_shared_mem() {
 	PrintThread{} << timestamp << " hook" << get_id() << " init_shared_mem entered" << std::endl;
     free(timestamp);
 	#endif
+
+    shm_ptr = make_shared<boost::interprocess::shared_memory_object>(
+        boost::interprocess::open_only, shm_name.c_str(),
+        boost::interprocess::read_write);
+    region_ptr = make_shared<boost::interprocess::mapped_region>(*shm_ptr, boost::interprocess::read_write);
+
     inited_shared_mem = true;
-    int *mem = static_cast<int*>(region.get_address());
+    int *mem = static_cast<int*>(region_ptr->get_address());
 
     current_process = &mem[0];
     #ifdef _VERBOSE_WENQING
