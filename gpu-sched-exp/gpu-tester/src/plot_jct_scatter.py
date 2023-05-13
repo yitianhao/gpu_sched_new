@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 import numpy as np
 import matplotlib
@@ -61,8 +62,8 @@ def prepare_file_paths(log_dir, prefix, sync):
 
 def draw_subplot(ax, xvals, yvals, xerrs, yerrs, texts, model_A_name,
                  model_B_name, is_relative, title):
-    ax.errorbar(xvals, yvals, yerr=yerrs, xerr=xerrs, color='none', ecolor=COLORS)
-    ax.scatter(xvals, yvals, marker='o', color=COLORS)
+    ax.errorbar(xvals, yvals, yerr=yerrs, xerr=xerrs, color='none', ecolor=COLORS[:len(xvals)])
+    ax.scatter(xvals, yvals, marker='o', color=COLORS[:len(xvals)])
     for x, y, text in zip(xvals, yvals, texts):
         ax.annotate(text, (x, y))
     if is_relative:
@@ -162,6 +163,8 @@ def main():
         if len(model_A_log_filtered) > 0:
             suptitle = "Filtered jobs in collision"
             model_A_log = model_A_log_filtered
+        else:
+            print(f'Skip {model_A_log_fname}, no filtered model_A logs!')
 
 
         jcts = model_A_log['jct_ms']
@@ -194,11 +197,21 @@ def main():
     # axes[0].plot(44.7, 110.1, "o")
     draw_subplot(axes[1], xvals, yvals, xerrs, yerrs, texts,
                  model_A_name, model_B_name, is_relative, title)
+    if is_relative:
+        axes[1].axvline(x = 0.1, c='k', ls='--')#, ymin=0, ymax=0.1)
+        axes[1].axhline(y = 0.1, c='k', ls='--')#, xmin=0, xmax=0.1)
+        # axes[1].set_xlim(0, 1)
+        # axes[1].set_ylim(0, 1)
 
-    fig.suptitle(suptitle)
+    # fig.suptitle(suptitle)
 
     fig.set_tight_layout(True)
     fig.savefig(os.path.join(args.log_dir, "jct_scatter_plot.jpg"), bbox_inches='tight')
+
+    with open(os.path.join(args.log_dir, "jct_scatter_plot.csv"), 'w') as f:
+        hd = csv.writer(f, lineterminator='\n')
+        hd.writerow(["xvals_abs", "yvals_abs", "xerrs_abs", "yerrs_abs", "xvals", "yvals", "xerrs", "yerrs"])
+        hd.writerows(zip(xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, xvals, yvals, xerrs, yerrs))
 
 if __name__ == '__main__':
     main()
