@@ -1,0 +1,48 @@
+{
+	"models": [
+		{
+			"model_name": "fasterrcnn_resnet50_fpn",
+			"model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+			"sleep_time": 0,
+			"input_file_path": "../data-set/rene/0000000099.png",
+			"output_file_path": "../results/traffic/nocontrol",
+			"output_file_name": "model_A",
+			"priority": 0,
+			"resize": true,
+			"resize_size": [1440, 2560],
+			"control": {
+				"control": false,
+				"controlsync": false,
+				"controlEvent": false,
+				"queue_limit": {
+					"sync": 1,
+					"event_group": 2
+				}
+			},
+			"batch_size": 6
+		},
+		{
+			"model_name": "fasterrcnn_resnet50_fpn",
+			"model_weight": "FasterRCNN_ResNet50_FPN_Weights",
+			"sleep_time": 1,
+			"input_file_path": "../data-set/traffic/720x1280_12fps",
+			"output_file_path": "../results/traffic/nocontrol",
+			"output_file_name": "model_B",
+			"priority": 1,
+			"resize": false,
+			"resize_size": [720, 1280],
+			"control": {
+				"control": false,
+				"controlsync": false,
+				"controlEvent": false,
+				"queue_limit": {
+					"sync": 0,
+					"event_group": 2
+				}
+			},
+			"batch_size": 3
+		}
+	],
+	"exp_dur": 240,
+	"device_id": 1
+}

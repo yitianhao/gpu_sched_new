@@ -68,7 +68,7 @@ class SchedulerTester():
             except Exception as e:
                 print(e)
         start_t: int = perf_counter_ns()
-        res = self.model()
+        res, dur = self.model()
         torch.cuda.synchronize()
         end_t: int = perf_counter_ns()
         if self.lib is not None:
@@ -84,16 +84,23 @@ class SchedulerTester():
             start_t, end_t, (end_t - start_t) / 1000000, max_alloc_mem_byte,
             max_rsrv_mem_byte])
         self.csv_fh.flush()
-        return res
+        return res, dur
 
     def run(self):
         sleep_dur = self.config['sleep_time']
         while RUNNING:
             torch.cuda.nvtx.range_push("regionTest")
-            self.infer()
+            _, dur = self.infer()
             sys.stdout.flush()
             torch.cuda.nvtx.range_pop()
-            sleep(sleep_dur)
+            # sleep(sleep_dur)
+            if dur is None:
+                sleep(sleep_dur)
+            else:
+                if 1 - dur < 0:
+                    sleep(0)
+                else:
+                    sleep(1 - dur)
 
 
 def main():
