@@ -13,7 +13,6 @@
 
 using namespace std;
 
-static int inited_shared_mem = 0;
 static string username(getenv("USER"));
 static string shm_name("MySharedMemory_" + username);
 static string named_mtx_name("named_mutex_" + username);
@@ -21,48 +20,78 @@ static string named_cnd_name("named_cnd_" + username);
 
 static std::shared_ptr<boost::interprocess::shared_memory_object> shm_ptr;
 static std::shared_ptr<boost::interprocess::mapped_region> region_ptr;
-
-// static boost::interprocess::shared_memory_object shm(
-//     boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_write);
-// static boost::interprocess::mapped_region region(shm, boost::interprocess::read_write);
-static boost::interprocess::named_mutex named_mtx(
-    boost::interprocess::open_only, named_mtx_name.c_str());
-static boost::interprocess::named_condition named_cnd{
-    boost::interprocess::open_only, named_cnd_name.c_str()};
+static std::shared_ptr<boost::interprocess::named_mutex> named_mtx_ptr;
+static std::shared_ptr<boost::interprocess::named_condition> named_cnd_ptr;
 
 static volatile int *current_process;
 
-void init_shared_mem_expset() {
-    shm_ptr = make_shared<boost::interprocess::shared_memory_object>(
-        boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_write);
-    region_ptr = make_shared<boost::interprocess::mapped_region>(*shm_ptr, boost::interprocess::read_write);
-    inited_shared_mem = 1;
-    int *mem = static_cast<int*>(region_ptr->get_address());
-    current_process = &mem[0];
+extern "C" void create_shared_mem_and_locks() {
+    if (shm_ptr == NULL) {
+        shm_ptr = make_shared<boost::interprocess::shared_memory_object>(
+            boost::interprocess::create_only, shm_name.c_str(),
+            boost::interprocess::read_write);
+        shm_ptr->truncate(1000);
+
+        boost::interprocess::mapped_region my_region(
+            *shm_ptr, boost::interprocess::read_write);
+        std::memset(my_region.get_address(), -1, my_region.get_size());
+    }
+
+    if (named_mtx_ptr == NULL) {
+        named_mtx_ptr = make_shared<boost::interprocess::named_mutex>(
+            boost::interprocess::create_only, named_mtx_name.c_str());
+    }
+
+    if (named_cnd_ptr == NULL) {
+        named_cnd_ptr = make_shared<boost::interprocess::named_condition>(
+            boost::interprocess::create_only, named_cnd_name.c_str());
+    }
 }
 
+extern "C" void remove_shared_mem_and_locks() {
+    if (shm_ptr != NULL) {
+        boost::interprocess::shared_memory_object::remove(shm_ptr->get_name());
+    }
+    if (named_mtx_ptr != NULL) {
+        boost::interprocess::named_mutex::remove(named_mtx_name.c_str());
+    }
+    if (named_cnd_ptr != NULL) {
+        boost::interprocess::named_condition::remove(named_cnd_name.c_str());
+    }
+}
+
+
 extern "C" void setMem(int input) {
-    if (!inited_shared_mem) {
-        init_shared_mem_expset();
+    if (shm_ptr == NULL || region_ptr == NULL) {
+        shm_ptr = make_shared<boost::interprocess::shared_memory_object>(
+            boost::interprocess::open_only, shm_name.c_str(),
+            boost::interprocess::read_write);
+        region_ptr = make_shared<boost::interprocess::mapped_region>(
+            *shm_ptr, boost::interprocess::read_write);
+        int *mem = static_cast<int*>(region_ptr->get_address());
+        current_process = &mem[0];
     }
+    if (named_mtx_ptr == NULL) {
+        named_mtx_ptr = make_shared<boost::interprocess::named_mutex>(
+            boost::interprocess::open_only, named_mtx_name.c_str());
+    }
+    if (named_cnd_ptr == NULL) {
+        named_cnd_ptr = make_shared<boost::interprocess::named_condition>(
+            boost::interprocess::open_only, named_cnd_name.c_str());
+    }
+    boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(
+        *named_mtx_ptr);
+    // https://en.cppreference.com/w/cpp/thread/condition_variable
+    *current_process = input;
     if (input == 0) {
-        // https://en.cppreference.com/w/cpp/thread/condition_variable
-        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
-        *current_process = input;
-        named_cnd.notify_one();
-    } else {
-        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
-        *current_process = input;
+        named_cnd_ptr->notify_one();
     }
+    printf("end lock \n");
+    fflush(stdout);
 }
 
 extern "C" void printCurr()
 {
     printf("lib curr%d\n", *current_process);
 }
-
-// int main()
-// {
-//     setMem(1);
-// }
 #endif
