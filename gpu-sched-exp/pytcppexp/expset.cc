@@ -94,8 +94,6 @@ extern "C" void setMem(int input, char* suffix) {
         named_cnd_ptr = make_shared<boost::interprocess::named_condition>(
             boost::interprocess::open_only, named_cnd_name.c_str());
     }
-    printf("start to lock \n");
-    fflush(stdout);
     boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(
         *named_mtx_ptr);
     // https://en.cppreference.com/w/cpp/thread/condition_variable
@@ -103,8 +101,6 @@ extern "C" void setMem(int input, char* suffix) {
     if (input == 0) {
         named_cnd_ptr->notify_one();
     }
-    printf("end lock \n");
-    fflush(stdout);
 }
 
 extern "C" void printCurr()

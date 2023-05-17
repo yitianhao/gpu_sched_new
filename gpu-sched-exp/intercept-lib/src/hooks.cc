@@ -40,7 +40,7 @@ using namespace std;
 #ifdef _SCHEDULER_LOCK
 
 // static string username(getenv("USER"));
-static string suffix(getenv("SUFFIX"));
+static string suffix(getenv("SUFFIX")); // TODO: bug when genenv returns NULL
 static string named_mtx_name("named_mutex_" + suffix);
 static string named_cnd_name("named_cnd_" + suffix);
 

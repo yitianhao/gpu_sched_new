@@ -5,6 +5,7 @@ import signal
 import sys
 import os
 import tempfile
+import uuid
 from ctypes import cdll
 from time import sleep
 from utils import read_json_file, write_json_file
@@ -42,9 +43,10 @@ def main():
         print(f"Input Experiment Config file: [{filename}] invalid.", file=sys.stderr)
         sys.exit(1)
 
-    #Initialize share mem
+    # Initialize share mem
     lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
-    lib.create_shared_mem_and_locks("zxxia".encode())
+    suffix = uuid.uuid4().hex
+    lib.create_shared_mem_and_locks(suffix.encode())
 
     #Run each model
     models = experiment_config.get('models', [])
@@ -70,7 +72,7 @@ def main():
             # process_env['ALNAIR_VGPU_COMPUTE_PERCENTILE'] = "99"
             # process_env['CGROUP_DIR'] = "../alnair"
             process_env['ID'] = str(model['priority'])
-            process_env['SUFFIX'] = "zxxia"
+            process_env['SUFFIX'] = suffix
             # process_env['UTIL_LOG_PATH'] = "sched_tester2_sm_util.log"
             # process_env['LD_PRELOAD'] = os.path.abspath(os.path.join(
             #     "../intercept-lib/build/lib/libcuinterpose.so"))
@@ -124,7 +126,7 @@ def main():
     write_json_file(
         os.path.join(model['output_file_path'], 'models_pid.json'), model_pids)
     print("PID summary log saved as [models_pid.json]")
-    lib.remove_shared_mem_and_locks("zxxia".encode())
+    lib.remove_shared_mem_and_locks(suffix.encode())
 
 
 if __name__ == '__main__':
