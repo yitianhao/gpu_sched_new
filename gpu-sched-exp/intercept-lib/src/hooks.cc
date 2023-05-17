@@ -39,17 +39,13 @@ using namespace std;
 // static named_mutex mutex(open_or_create, "named_mutex");
 #ifdef _SCHEDULER_LOCK
 
-static bool inited_shared_mem = false;
-static string username(getenv("USER"));
-static string shm_name("MySharedMemory_" + username);
-static string named_mtx_name("named_mutex_" + username);
-static string named_cnd_name("named_cnd_" + username);
+// static string username(getenv("USER"));
+static string suffix(getenv("SUFFIX"));
+static string named_mtx_name("named_mutex_" + suffix);
+static string named_cnd_name("named_cnd_" + suffix);
 
 static std::shared_ptr<boost::interprocess::shared_memory_object> shm_ptr;
 static std::shared_ptr<boost::interprocess::mapped_region> region_ptr;
-// static boost::interprocess::shared_memory_object shm(
-//     boost::interprocess::open_only, shm_name.c_str(), boost::interprocess::read_only);
-// static boost::interprocess::mapped_region region(shm, boost::interprocess::read_only);
 static boost::interprocess::named_mutex named_mtx(
     boost::interprocess::open_only, named_mtx_name.c_str());
 static boost::interprocess::named_condition named_cnd(
@@ -65,12 +61,13 @@ void init_shared_mem() {
     free(timestamp);
 	#endif
 
+    string shm_name("MySharedMemory_" + suffix);
     shm_ptr = make_shared<boost::interprocess::shared_memory_object>(
-        boost::interprocess::open_only, shm_name.c_str(),
+        boost::interprocess::open_or_create, shm_name.c_str(),
         boost::interprocess::read_write);
-    region_ptr = make_shared<boost::interprocess::mapped_region>(*shm_ptr, boost::interprocess::read_write);
+    region_ptr = make_shared<boost::interprocess::mapped_region>(
+        *shm_ptr, boost::interprocess::read_write);
 
-    inited_shared_mem = true;
     int *mem = static_cast<int*>(region_ptr->get_address());
 
     current_process = &mem[0];
@@ -389,7 +386,7 @@ CUresult cuLaunchKernel_hook(
 
 #ifdef _SCHEDULER_LOCK
 
-    if(!inited_shared_mem) {
+    if(shm_ptr == NULL || region_ptr == NULL) {
         init_shared_mem();
     }
 #ifdef _VERBOSE_WENQING

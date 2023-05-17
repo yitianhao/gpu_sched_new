@@ -44,7 +44,7 @@ def main():
 
     #Initialize share mem
     lib = cdll.LoadLibrary(os.path.abspath("../pytcppexp/libgeek.so"))
-    lib.create_shared_mem_and_locks()
+    lib.create_shared_mem_and_locks("zxxia".encode())
 
     #Run each model
     models = experiment_config.get('models', [])
@@ -70,6 +70,7 @@ def main():
             # process_env['ALNAIR_VGPU_COMPUTE_PERCENTILE'] = "99"
             # process_env['CGROUP_DIR'] = "../alnair"
             process_env['ID'] = str(model['priority'])
+            process_env['SUFFIX'] = "zxxia"
             # process_env['UTIL_LOG_PATH'] = "sched_tester2_sm_util.log"
             # process_env['LD_PRELOAD'] = os.path.abspath(os.path.join(
             #     "../intercept-lib/build/lib/libcuinterpose.so"))
@@ -123,7 +124,7 @@ def main():
     write_json_file(
         os.path.join(model['output_file_path'], 'models_pid.json'), model_pids)
     print("PID summary log saved as [models_pid.json]")
-    lib.remove_shared_mem_and_locks()
+    lib.remove_shared_mem_and_locks("zxxia".encode())
 
 
 if __name__ == '__main__':
