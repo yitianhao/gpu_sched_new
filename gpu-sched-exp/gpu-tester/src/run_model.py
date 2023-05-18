@@ -64,7 +64,9 @@ class SchedulerTester():
         res = None # res :torch.Tensor
         if self.lib is not None:
             try:
-                self.lib.setMem(1)
+                suffix = os.getenv("SUFFIX", None)
+                assert suffix is not None
+                self.lib.setMem(1, suffix.encode())
             except Exception as e:
                 print(e)
         start_t: int = perf_counter_ns()
@@ -73,7 +75,9 @@ class SchedulerTester():
         end_t: int = perf_counter_ns()
         if self.lib is not None:
             try:
-                self.lib.setMem(0)
+                suffix = os.getenv("SUFFIX", None)
+                assert suffix is not None
+                self.lib.setMem(0, suffix.encode())
             except Exception as e:
                 print(e)
             # read and print shared memory's current value
