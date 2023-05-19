@@ -31,6 +31,7 @@ limitations under the License.
 #include <boost/interprocess/sync/named_semaphore.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
+#include <nvtx3/nvToolsExt.h>
 // #include <ctime>
 
 using namespace std;
@@ -404,14 +405,22 @@ CUresult cuLaunchKernel_hook(
         free(timestamp);
 #endif
         // https://www.boost.org/doc/libs/1_63_0/doc/html/thread/synchronization.html#thread.synchronization.condvar_ref
+        bool pushed = false;
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         while(*current_process == 1) {
+            if (!pushed) {
+                nvtxRangePushA("preemption");
+                pushed = true;
+            }
 #ifdef _VERBOSE_WENQING
 	        char *timestamp = printUTCTime();
 	        PrintThread{} << timestamp << " hook" << get_id() << "in loop" << *current_process << std::endl;
             free(timestamp);
 #endif
             named_cnd.wait(lock);
+        }
+        if (pushed) {
+            nvtxRangePop();
         }
 #ifdef _VERBOSE_WENQING
 	    timestamp = printUTCTime();
@@ -538,7 +547,9 @@ CUresult cuLaunchKernel_posthook(
     //only add synchronization point to the long job.
     static int cnt = 0;
     if (cnt++ % SYNC_KERNELS == 0) {
+        nvtxRangePushA("sync");
         cuStreamSynchronize(hStream);
+        nvtxRangePop();
 #ifdef _VERBOSE_WENQING
         PrintThread{} << getMicrosecUTCTime() << " " << cnt << " Sync" << std::endl;
 #endif
