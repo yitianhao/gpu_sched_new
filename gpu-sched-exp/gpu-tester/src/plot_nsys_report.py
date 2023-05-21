@@ -94,7 +94,8 @@ def main():
         ax.set_ylim(0, )
 
         fig.set_tight_layout(True)
-        fig.savefig(os.path.join(args.output_dir, 'queued_kernels.jpg'))
+        fig.savefig(os.path.join(args.output_dir, 'queued_kernels.jpg'),
+                    bbox_inches='tight')
         return
 
     experiment_pids = read_json_file(args.pids)
@@ -192,32 +193,35 @@ def main():
     # ax.set_title('sync = {}'.format(sync))
 
     fig.set_tight_layout(True)
-    fig.savefig(os.path.join(args.output_dir,
-                             'job_arrival_and_queued_kernels.jpg'))
+    fig.savefig(os.path.join(
+        args.output_dir, 'job_arrival_and_queued_kernels.jpg'),
+        bbox_inches='tight')
 
     # CDF
-    fig, axes = plt.subplots(1, 2, figsize=(10, 12))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
     # Output CDF
-    mask = df['PID'] == model_B_pid
+    mask = df['PID'] == model_A_pid
     x, y = cdf(df[mask]['Kernel Dur (ns)'])
     ax = axes[0]
     ax.set_title(f"{model_B_name} Kernel Execution Duration")
-    ax.set_xlabel('Kernel Exection Time (ns)')
+    ax.set_xlabel('Kernel Exection Time (ms)')
     ax.set_ylabel('CDF')
-    ax.plot(x, y, marker='.')
+    ax.plot(x / SEC_IN_NS * SEC_IN_MS, y, marker='.')
+    ax.set_ylim(0, 1.1)
 
 
-    mask = df['PID'] == model_A_pid
+    mask = df['PID'] == model_B_pid
     x, y = cdf(df[mask]['Kernel Dur (ns)'])
     ax = axes[1]
     ax.set_title(f"{model_A_name} Kernel Execution Duration")
-    ax.set_xlabel('Kernel Exection Time (ns)')
+    ax.set_xlabel('Kernel Exection Time (ms)')
     ax.set_ylabel('CDF')
-    ax.plot(x, y, marker='.')
+    ax.plot(x / SEC_IN_NS * SEC_IN_MS, y, marker='.')
+    ax.set_ylim(0, 1.1)
 
     fig.set_tight_layout(True)
-    fig.savefig(os.path.join(args.output_dir, 'cdf.jpg'))
+    fig.savefig(os.path.join(args.output_dir, 'cdf.jpg'), bbox_inches='tight')
 
 if __name__ == '__main__':
     main()
