@@ -44,17 +44,17 @@ for index in "${!model_B_names[@]}"; do
 
         # nvidia-smi --query-gpu=timestamp,utilization.memory,memory.total,memory.free,memory.used \
         #     --format=csv -l 1 -f ${out_path}/smi_report.csv & pid=$!
-        # nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s cpu \
-        #     -o ${out_path}/nsight_report -f true -e --cudabacktrace=true -x true \
+        nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s process-tree \
+            -o ${out_path}/nsight_report -f true -e --cudabacktrace=true -x true \
         python src/run_exp.py -f $exp_config_file
         # kill $pid
-        # nsys stats -r kernexectrace --format csv -o ${out_path}/nsight_report \
-        #     ${out_path}/nsight_report.nsys-rep
-        # python src/plot_nsys_report.py \
-        #     -f ${out_path}/nsight_report_kernexectrace.csv \
-        #     -p ${out_path}/models_pid.json \
-        #     -o ${out_path}
-        # done
+        nsys stats -r kernexectrace,nvtxpptrace --format csv --force-export true \
+            --force-overwrite true -o ${out_path}/nsight_report \
+            ${out_path}/nsight_report.nsys-rep
+        python src/plot_nsys_report.py \
+            -f ${out_path}/nsight_report_kernexectrace.csv \
+            -p ${out_path}/models_pid.json \
+            -o ${out_path}
     done
 done
 
