@@ -44,3 +44,11 @@ def get_jcts_from_profile(profile_filename):
     profile = read_yaml_file(profile_filename)
     jcts = [row['jct'] for row in profile if row['jct'] < 1000]
     return jcts
+
+def get_config_name(config):
+    name = ""
+    for model in config['models']:
+        if len(name) != 0:
+            name += "_vs_"
+        name += f"{model['model_name']}_batch_{model['batch_size']}_sleep_time_{model['sleep_time']}"
+    return name
