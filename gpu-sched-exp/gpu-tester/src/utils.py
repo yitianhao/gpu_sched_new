@@ -46,9 +46,16 @@ def get_jcts_from_profile(profile_filename):
     return jcts
 
 def get_config_name(config):
+    if "resize_size" in config:
+        w, h = config['resize_size']
+        return f"{config['model_name']}_{w}x{h}_batch_{config['batch_size']}_sleep_{config['sleep_time']}"
+    else:
+        return f"{config['model_name']}_batch_{config['batch_size']}_sleep_{config['sleep_time']}"
+
+def get_configs_name(config):
     name = ""
     for model in config['models']:
         if len(name) != 0:
             name += "_vs_"
-        name += f"{model['model_name']}_batch_{model['batch_size']}_sleep_time_{model['sleep_time']}"
+        name += get_config_name(model)
     return name

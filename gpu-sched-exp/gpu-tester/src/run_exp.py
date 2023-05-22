@@ -8,7 +8,7 @@ import tempfile
 import uuid
 from ctypes import cdll
 from time import sleep
-from utils import read_json_file, write_json_file
+from utils import get_config_name, read_json_file, write_json_file
 
 def createModelTempFile(models):
     model_files = []
@@ -106,8 +106,7 @@ def main():
             cmd, cwd=cwd, stdout=logfile,
             stderr=logfile, env=process_env)
         # record model's PID
-        model_name = f"{model['model_name']}_{str(model['resize_size'][0])}" \
-            if model['resize'] else model['model_name']
+        model_name = get_config_name(model)
         model_pids.append((model_name, model_process.pid))
         model_processes.append(model_process)
 

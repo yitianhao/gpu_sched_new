@@ -3,7 +3,7 @@ import os
 # import random
 from itertools import product
 from generate_profile_config import MODEL_NAMES, MODEL_WEIGHTS, TEMPLATE
-from utils import write_json_file, get_config_name
+from utils import write_json_file, get_configs_name
 
 # random.seed(42)
 model_A_batch_sizes = [1, 8]
@@ -53,13 +53,13 @@ for idx, pair in enumerate(pairs):
         else:
             w, h = 720, 1280
             config["resize_size"] = [w, h]
-            config["resize"] = True
+            config["resize"] = False
 
         model_configs.append(config)
 
         exp_config = {'models': model_configs, 'exp_dur': 90, 'device_id': idx % 3}
         print(idx, idx % 3)
-        name = get_config_name(exp_config)
+        name = get_configs_name(exp_config)
         exp_config['models'][0]['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/{name}/sync_{sync}'
         exp_config['models'][1]['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/{name}/sync_{sync}'
         print(name)
