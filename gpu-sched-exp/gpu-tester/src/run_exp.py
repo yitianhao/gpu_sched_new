@@ -61,7 +61,7 @@ def main():
         logfilename = os.path.join(
             model['output_file_path'], f"{model['output_file_name']}.log")
         os.makedirs(model['output_file_path'], exist_ok=True)
-        logfile = open(logfilename, "w")
+        logfile = open(logfilename, "w", 1)
         log_files.append(logfile)
         # hooks configuration
         process_env = os.environ.copy()
