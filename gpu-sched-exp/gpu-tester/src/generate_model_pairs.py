@@ -31,10 +31,13 @@ for idx, pair in enumerate(pairs):
         config['batch_size'] = model_A_batch
         config['control']['queue_limit']['sync'] = sync
         config['output_file_name'] = 'model_A'
-        config['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/sync_{sync}'
         if 'codegen' in config['model_name']:
             config['repo_path'] = '/dataheart/zxxia/CodeGen'
             config['python_path'] = '/dataheart/zxxia/CodeGen/.venv/bin/python'
+        else:
+            w, h = 720, 1280
+            config["resize_size"] = [w, h]
+            config["resize"] = False
 
         model_configs.append(config)
 
@@ -66,4 +69,4 @@ for idx, pair in enumerate(pairs):
 
         save_dir = os.path.join("../model_pair_configs", f"device_{idx % 3}", f'{name}', f'sync_{sync}')
         os.makedirs(save_dir, exist_ok=True)
-        write_json_file( os.path.join(save_dir, f'{name}.json'), exp_config)
+        write_json_file(os.path.join(save_dir, f'{name}.json'), exp_config)
