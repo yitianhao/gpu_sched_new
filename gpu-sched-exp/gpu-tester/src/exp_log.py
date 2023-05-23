@@ -37,6 +37,9 @@ class GPUSchedExpLog:
             raise ValueError(f"model B job num kernels is {self.model_B_job_num_kernels}")
         print(self.model_A_job_num_kernels, self.model_B_job_num_kernels)
 
+    def get_model_B_jct_ms(self):
+        return self.model_B_jct_log['jct_ms'].tolist()
+
     def get_kernel_queue(self):
         """Get a list of kernel ids of model A GPU kernels in queue when model
         B arrives. Each kernel id is in [0, num_kernels in one model A job]."""
@@ -47,7 +50,7 @@ class GPUSchedExpLog:
         mask = (self.nvtx_trace['PID'] == self.models_pid[1][1]) & \
                (self.nvtx_trace['Name'] == "regionTest")
         for _, row in self.nvtx_trace[mask].iterrows():
-            # TODO: get model B GPU kernels with in a model B job
+            # get model B GPU kernels with in a model B job
             m1 = ((row['Start (ns)'] <= self.model_B_kernel_trace['Kernel Start (ns)'])
             & (self.model_B_kernel_trace['Kernel Start (ns)'] <= row['End (ns)']))
             m2 = ((row['Start (ns)'] <= self.model_B_kernel_trace['Kernel End (ns)']) &
@@ -56,11 +59,11 @@ class GPUSchedExpLog:
 
             # model B's kernels' timestamps within regionTest range
             model_B_start = model_B_kernels.iloc[0]['Kernel Start (ns)']
-            model_B_end = model_B_kernels.iloc[0]['Kernel End (ns)']
+            model_B_end = model_B_kernels.iloc[-1]['Kernel End (ns)']
 
             # model B's regionTest start and end timestamps
-            model_B_start = row['Start (ns)']
-            model_B_end = row['End (ns)']
+            # model_B_start = row['Start (ns)']
+            # model_B_end = row['End (ns)']
 
             # get model A GPU kernels which have overlaps with model B job
             m1 = ((model_B_start <= self.model_A_kernel_trace['Kernel Start (ns)'])
@@ -125,3 +128,9 @@ class GPUJobProfile:
 
     def __len__(self):
         return len(self.mean_kernel_exec_time_map)
+
+    def get_avg_jct_ms(self):
+        return self.jct_profile.iloc[1:]['jct_ms'].mean()
+
+    def get_kernel_exec_times(self, kernel_ids):
+        return [self.mean_kernel_exec_time_map[id]['mean'] for id in kernel_ids]
