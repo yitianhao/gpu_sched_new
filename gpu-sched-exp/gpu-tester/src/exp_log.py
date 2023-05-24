@@ -83,11 +83,14 @@ class GPUJobProfile:
     def __init__(self, nsys_kernel_profile: str, jct_profile: str,
                  nsys_nvtx_profile: Optional[str] = None,
                  num_kernels: Optional[int] = None,
-                 cache: bool = True):
+                 cache: bool = True, overwrite=True):
+        self.nsys_kernel_profile = nsys_kernel_profile
+        self.nsys_nvtx_profile = nsys_nvtx_profile
+        self.jct_profile = jct_profile
         folder = os.path.dirname(nsys_kernel_profile)
         cache_fname = os.path.join(folder, "kernel_exec_time_map.json")
         self.jct_profile = pd.read_csv(jct_profile)
-        if cache and os.path.exists(cache_fname):
+        if not overwrite and cache and os.path.exists(cache_fname):
             # speed up profile log reading
             self.mean_kernel_exec_time_map = read_json_file(cache_fname)
             self.num_kernels = len(self.mean_kernel_exec_time_map)
@@ -104,7 +107,7 @@ class GPUJobProfile:
             self.num_kernels = num_kernels
         self._build_kernel_execution_time_map()
         self._build_mean_kernel_execution_time_map()
-        if cache and not os.path.exists(cache_fname):
+        if overwrite or (cache and not os.path.exists(cache_fname)):
             write_json_file(cache_fname, self.mean_kernel_exec_time_map)
 
         if nsys_nvtx_profile is not None:
