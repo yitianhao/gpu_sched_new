@@ -86,12 +86,15 @@ class GPUJobProfile:
                  cache: bool = True):
         folder = os.path.dirname(nsys_kernel_profile)
         cache_fname = os.path.join(folder, "kernel_exec_time_map.json")
+        self.jct_profile = pd.read_csv(jct_profile)
         if cache and os.path.exists(cache_fname):
+            # speed up profile log reading
             self.mean_kernel_exec_time_map = read_json_file(cache_fname)
+            self.num_kernels = len(self.mean_kernel_exec_time_map)
+            return
         self.kernel_profile = pd.read_csv(nsys_kernel_profile)
 
         if num_kernels is None:
-            self.jct_profile = pd.read_csv(jct_profile)
             self.num_kernels = len(self.kernel_profile.index) / len(self.jct_profile.index)
             if self.num_kernels.is_integer():
                 self.num_kernels = int(self.num_kernels)
