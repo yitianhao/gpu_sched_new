@@ -4,6 +4,10 @@ import pandas as pd
 import numpy as np
 from utils import read_json_file, write_json_file
 
+def json_keys2int(x):
+    if isinstance(x, dict):
+        return {int(k):v for k,v in x.items()}
+    return x
 
 class GPUSchedExpLog:
     def __init__(self, nsys_kernel_trace: str, nsys_nvtx_trace: str,
@@ -35,10 +39,10 @@ class GPUSchedExpLog:
             self.model_B_job_num_kernels = int(self.model_B_job_num_kernels)
         else:
             raise ValueError(f"model B job num kernels is {self.model_B_job_num_kernels}")
-        print(self.model_A_job_num_kernels, self.model_B_job_num_kernels)
+        print(f"Loaded {nsys_kernel_trace}")
 
     def get_model_B_jct_ms(self):
-        return self.model_B_jct_log['jct_ms'].tolist()
+        return self.model_B_jct_log['jct_ms'][1:].tolist()
 
     def get_kernel_queue(self):
         """Get a list of kernel ids of model A GPU kernels in queue when model
@@ -76,7 +80,7 @@ class GPUSchedExpLog:
                 kernel_ids.append(self.model_A_kernel_trace.index.get_loc(idx)
                                   % self.model_A_job_num_kernels)
             kernel_ids_groups.append(kernel_ids)
-        return kernel_ids_groups
+        return kernel_ids_groups[1:]
 
 
 class GPUJobProfile:
@@ -90,9 +94,11 @@ class GPUJobProfile:
         folder = os.path.dirname(nsys_kernel_profile)
         cache_fname = os.path.join(folder, "kernel_exec_time_map.json")
         self.jct_profile = pd.read_csv(jct_profile)
-        if not overwrite and cache and os.path.exists(cache_fname):
+        if (not overwrite) and cache and os.path.exists(cache_fname):
             # speed up profile log reading
-            self.mean_kernel_exec_time_map = read_json_file(cache_fname)
+            self.mean_kernel_exec_time_map = read_json_file(
+                cache_fname)
+            self.mean_kernel_exec_time_map = json_keys2int(self.mean_kernel_exec_time_map)
             self.num_kernels = len(self.mean_kernel_exec_time_map)
             return
         self.kernel_profile = pd.read_csv(nsys_kernel_profile)
