@@ -47,7 +47,7 @@ class SchedulerTester():
         csv_filename = os.path.join(
             self.config['output_file_path'],
             self.config['output_file_name'] + ".csv")
-        self.csv_fh = open(csv_filename, 'w')
+        self.csv_fh = open(csv_filename, 'w', 1)
         self.csv_writer = csv.writer(self.csv_fh, lineterminator='\n')
 
         # https://pytorch.org/docs/stable/notes/cuda.html#memory-management

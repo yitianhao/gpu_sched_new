@@ -1,5 +1,6 @@
 import collections
 import json
+import re
 import numpy as np
 import yaml
 import pandas as pd
@@ -44,3 +45,28 @@ def get_jcts_from_profile(profile_filename):
     profile = read_yaml_file(profile_filename)
     jcts = [row['jct'] for row in profile if row['jct'] < 1000]
     return jcts
+
+def get_config_name(config):
+    if "resize_size" in config:
+        w, h = config['resize_size']
+        return f"{config['model_name']}_{w}x{h}_batch_{config['batch_size']}_sleep_{config['sleep_time']}"
+    else:
+        return f"{config['model_name']}_batch_{config['batch_size']}_sleep_{config['sleep_time']}"
+
+def get_configs_name(config):
+    name = ""
+    for model in config['models']:
+        if len(name) != 0:
+            name += "_vs_"
+        name += get_config_name(model)
+    return name
+
+def get_config_from_name(name: str):
+
+    batch_size = int(re.findall("batch_(\d+)", name)[0])
+    sleep_time = int(re.findall("sleep_(\d+)", name)[0])
+    idx = name.find('_batch')
+    model_name = name[:idx]
+    # print(re.findall("[^_batch]*", name))
+    # print(batch_size, sleep_time, model_name)
+    return model_name, sleep_time, batch_size
