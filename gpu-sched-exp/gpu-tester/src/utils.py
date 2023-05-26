@@ -1,5 +1,6 @@
 import collections
 import json
+import time
 import numpy as np
 import yaml
 import pandas as pd
@@ -44,3 +45,15 @@ def get_jcts_from_profile(profile_filename):
     profile = read_yaml_file(profile_filename)
     jcts = [row['jct'] for row in profile if row['jct'] < 1000]
     return jcts
+
+
+class print_time:
+    def __init__(self, desc):
+        self.desc = desc
+
+    def __enter__(self):
+        print(self.desc)
+        self.t = time.time()
+
+    def __exit__(self, type, value, traceback):
+        print(f'{self.desc} took {time.time()-self.t:.02f}s')
