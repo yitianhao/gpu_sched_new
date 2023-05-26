@@ -18,6 +18,10 @@ model_A_weight=codegen-350M-mono
 model_A_batch_size=8
 python_path=/mnt/data/zxxia/CodeGen/.venv/bin/python
 repo_path=/mnt/data/zxxia/CodeGen
+python_path=/dataheart/zxxia/CodeGen/.venv/bin/python
+repo_path=/dataheart/zxxia/CodeGen
+sleep_time=2
+model_B_batch_size=1
 
 for index in "${!model_B_names[@]}"; do
     echo $index ${model_B_names[$index]} ${model_B_weights[$index]}
@@ -28,6 +32,7 @@ for index in "${!model_B_names[@]}"; do
         out_path="../results/${exp_name}/sync_${sync}"
         mkdir -p $out_path
         exp_config_file=${out_path}/exp_config.json
+        # jq .models[0].control.queue_limit.event_group=$sync ${config_file}  | \
         jq .models[0].control.queue_limit.sync=$sync ${config_file}  | \
         jq .exp_dur=90  | \
         jq .device_id=1  | \
@@ -37,8 +42,13 @@ for index in "${!model_B_names[@]}"; do
         jq --arg repo_path "${repo_path}" '.models[0].repo_path=$repo_path'  | \
         jq '.models[0].resize_size=[720, 1280]'  | \
         jq .models[0].batch_size=$model_A_batch_size  | \
+        jq .models[0].sleep_time=0 | \
         jq --arg model_B_name "${model_B_names[$index]}" '.models[1].model_name=$model_B_name'  | \
         jq --arg model_B_weight "${model_B_weights[$index]}" '.models[1].model_weight=$model_B_weight'  | \
+        jq --arg python_path "${python_path}" '.models[1].python_path=$python_path'  | \
+        jq --arg repo_path "${repo_path}" '.models[1].repo_path=$repo_path'  | \
+        jq .models[1].sleep_time=${sleep_time} | \
+        jq .models[1].batch_size=${model_B_batch_size} | \
         jq --arg out_path "${out_path}" '.models[0].output_file_path=$out_path' | \
         jq --arg out_path "${out_path}" '.models[1].output_file_path=$out_path' > ${exp_config_file}
 
@@ -57,58 +67,4 @@ for index in "${!model_B_names[@]}"; do
             -o ${out_path}
     done
 done
-
-
-
-
-    # jq '.models[1].model_name="ssd300_vgg16"'  | \
-    # jq '.models[1].model_weight="SSD300_VGG16_Weights"'  | \
-# python src/plot_jct_scatter.py \
-#     --log-dir \
-#         ../results/$exp_name \
-#     --model-A-profile \
-#         ./profiles/detection/fasterrcnn_resnet50_fpn_1440x2560_sleep_time_0.csv \
-#     --model-B-profile \
-#         ./profiles/detection/fasterrcnn_resnet50_fpn_720x1280_sleep_time_1.csv
-
-# config_file=exp_configs/input_controlevent.json
-# tmp_config_file=/tmp/input_controlevent.json
-# for event_group in 1 2 4 8 10 20 50 100 500 1000 5000 10000 1000000; do
-#     round=0
-#     out_path="../results/fcn_controlevent/event_group_${event_group}/round_${round}"
-#     jq .models[0].control.queue_limit.event_group=$event_group ${config_file}  | \
-#     jq --arg out_path "${out_path}" '.models[0].output_file_path=$out_path' | \
-#     jq --arg out_path "${out_path}" '.models[1].output_file_path=$out_path' > ${tmp_config_file}
-#     python src/run_exp.py -f /tmp/input_controlevent.json
-# done
-
-
-# config_file=exp_configs/input_controlsync.json
-# tmp_config_file=/tmp/input_controlsync.json
-# for sync in 1 2 4 8 10 20 50 100 500 1000 5000 10000 1000000; do
-#     # for round in $(seq 0 1 1); do
-#     round=0
-#         # echo $sync $round
-#     out_path="../results/controlsync_resnext101_resnet101/sync_${sync}/round_${round}"
-#     jq .models[0].control.queue_limit.sync=$sync ${config_file}  | \
-#     jq '.models[0].model_name="resnext101_32x8d"'  | \
-#     jq '.models[0].model_weight="ResNeXt101_32X8D_Weights"'  | \
-#     jq '.models[0].resize="true"'  | \
-#     jq '.models[0].resize_size=[720, 1280]'  | \
-#     jq '.models[1].model_name="resnet101"'  | \
-#     jq '.models[1].model_weight="Resnet101_Weights"'  | \
-#     jq --arg out_path "${out_path}" '.models[0].output_file_path=$out_path' | \
-#     jq --arg out_path "${out_path}" '.models[1].output_file_path=$out_path' > ${tmp_config_file}
-#     python src/run_exp.py -f $tmp_config_file
-#     # jq '.models[1].model_name="resnet50"'  | \
-#     # jq '.models[1].model_weight="ResNet50_Weights"'  | \
-
-#     # jq '.models[0].model_name="resnet50"'  | \
-#     # jq '.models[0].model_weight="ResNet50_Weights"'  | \
-#     # jq '.models[0].resize="true"'  | \
-#     # jq '.models[0].resize_size=[1440, 2560]'  | \
-#     # jq '.models[1].model_name="resnet50"'  | \
-#     # jq '.models[1].model_weight="ResNet50_Weights"'  | \
-#         # mv ../results/fcn_new/fcn_new_sync_${sync} ../results/fcn_new/sync_$sync
-#     # done
-# done
+done
