@@ -59,27 +59,23 @@ def prepare_file_paths(log_dir, prefix, sync):
 
     return model_A_log, model_B_log, model_pid
 
-def draw_subplot(ax, syncs, xvals, yvals, xerrs, yerrs, texts, model_A_name,
+def draw_subplot(ax, syncs, xvals, yvals, model_A_name,
                  model_B_name, is_relative, title):
-    # ax.errorbar(syncs, xvals, yerr=yerrs, xerr=xerrs, color='none', ecolor=COLORS)
-    # syncs = syncs[:10]
-    # xvals = xvals[:10]
-    # yvals = yvals[:10]
+    y1_color = 'b'
+    y2_color = 'r'
     ax.set_xlabel('sync frequencies')
     ax.set_xscale("log")
-    ax.scatter(syncs, xvals, marker='o', color='b', label=f'{model_B_name}')
+    ax.scatter(syncs, xvals, marker='o', color=y1_color, label=f'{model_B_name}')
     ax2 = ax.twinx()
-    ax2.scatter(syncs, yvals, marker='^', color='r', label=f'{model_A_name}')
-    # for x, y, text in zip(xvals, yvals, texts):
-    #     ax.annotate(text, (x, y))
+    ax2.scatter(syncs, yvals, marker='^', color=y2_color, label=f'{model_A_name}')
     if is_relative:
         ax.set_xlim(0, )
         ax.set_ylim(0, )
-        ax.set_ylabel(f"{model_B_name} delay inflation")
-        ax2.set_ylabel(f"{model_A_name} delay inflation")
+        ax.set_ylabel(f"{model_B_name} delay inflation", color=y1_color)
+        ax2.set_ylabel(f"{model_A_name} delay inflation", color=y2_color)
     else:
-        ax.set_ylabel(f"{model_B_name} avg jct (ms)")
-        ax2.set_ylabel(f"{model_A_name} avg jct (ms)")
+        ax.set_ylabel(f"{model_B_name} avg jct (ms)", color=y1_color)
+        ax2.set_ylabel(f"{model_A_name} avg jct (ms)", color=y2_color)
     ax.set_title(title)
     ax.legend(frameon=True, loc=0, bbox_to_anchor=(1, -0.1))
     ax2.legend(frameon=True, loc=0, bbox_to_anchor=(1, -0.2))
@@ -167,9 +163,9 @@ def main():
         plot_job_arrival(model_A_log, model_B_log, model_A_name, model_B_name,
                          os.path.dirname(model_A_log_fname))
         model_A_log_filtered = filter_log(model_A_log, model_B_log)
-        suptitle = "Including jobs in collision"
+        suptitle = f"{args.log_dir}\nIncluding jobs in collision"
         if len(model_A_log_filtered) > 0:
-            suptitle = "Filtered jobs in collision"
+            suptitle = f"{args.log_dir}\nFiltered jobs in collision"
             model_A_log = model_A_log_filtered
 
 
@@ -195,16 +191,13 @@ def main():
 
         texts.append(f"sync={sync}")
 
-    plt.style.use('seaborn-whitegrid')
     plt.rcParams['font.size'] = 16
     fig, axes = plt.subplots(figsize=(10, 8))
 
     title = ""
     # draw_subplot(axes[0], args.syncs, xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, texts,
     #              model_A_name, model_B_name, False, title)
-    # axes[0].plot(44.7, 110.1, "o")
-    draw_subplot(axes, args.syncs, xvals, yvals, xerrs, yerrs, texts,
-                 model_A_name, model_B_name, is_relative, title)
+    draw_subplot(axes, args.syncs, xvals, yvals, model_A_name, model_B_name, is_relative, title)
 
     fig.suptitle(suptitle)
 
