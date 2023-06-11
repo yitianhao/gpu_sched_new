@@ -67,6 +67,9 @@ class SchedulerTester():
                 suffix = os.getenv("SUFFIX", None)
                 assert suffix is not None
                 self.lib.setMem(1, suffix.encode())
+                print('start to wait for empty GPU')
+                self.lib.waitForEmptyGPU()
+                print('end waiting for empty GPU')
             except Exception as e:
                 print(e)
         # torch.cuda.synchronize()  # make sure there is no time sharing between large job and small job

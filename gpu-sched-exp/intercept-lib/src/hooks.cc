@@ -44,6 +44,8 @@ using namespace std;
 static string suffix(getenv("SUFFIX")); // TODO: bug when genenv returns NULL
 static string named_mtx_name("named_mutex_" + suffix);
 static string named_cnd_name("named_cnd_" + suffix);
+static string named_mtx_dev_sync_name("named_mutex_dev_sync_" + suffix);
+static string named_cnd_dev_sync_name("named_cnd_dev_sync_" + suffix);
 
 static std::shared_ptr<boost::interprocess::shared_memory_object> shm_ptr;
 static std::shared_ptr<boost::interprocess::mapped_region> region_ptr;
@@ -52,7 +54,13 @@ static boost::interprocess::named_mutex named_mtx(
 static boost::interprocess::named_condition named_cnd(
     boost::interprocess::open_only, named_cnd_name.c_str());
 
+static boost::interprocess::named_mutex named_mtx_dev_sync(
+    boost::interprocess::open_only, named_mtx_dev_sync_name.c_str());
+static boost::interprocess::named_condition named_cnd_dev_sync(
+    boost::interprocess::open_only, named_cnd_dev_sync_name.c_str());
+
 static volatile int *current_process;
+static volatile int *gpu_empty;
 
 
 void init_shared_mem() {
@@ -72,6 +80,7 @@ void init_shared_mem() {
     int *mem = static_cast<int*>(region_ptr->get_address());
 
     current_process = &mem[0];
+    gpu_empty = &mem[1];
     #ifdef _VERBOSE_WENQING
 	timestamp = printUTCTime();
 	PrintThread{} << timestamp << " hook" << get_id() << " init_shared_mem exited" << std::endl;
@@ -408,6 +417,12 @@ CUresult cuLaunchKernel_hook(
         bool pushed = false;
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         while(*current_process == 1) {
+            cudaDeviceSynchronize();
+            {
+                boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock_dev_sync(named_mtx_dev_sync);
+                *gpu_empty = 1;
+                named_cnd_dev_sync.notify_one();
+            }
             if (!pushed) {
                 nvtxRangePushA("preemption");
                 pushed = true;
@@ -422,6 +437,8 @@ CUresult cuLaunchKernel_hook(
         if (pushed) {
             nvtxRangePop();
         }
+        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock_dev_sync(named_mtx_dev_sync);
+        *gpu_empty = 0;
 #ifdef _VERBOSE_WENQING
 	    timestamp = printUTCTime();
 	    PrintThread{} << timestamp << " hook" << get_id() << "after loop" << *current_process << std::endl;
