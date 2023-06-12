@@ -1,14 +1,13 @@
 import argparse
 import json
-import subprocess
-import signal
+import multiprocessing as mp
 import sys
 import os
 import tempfile
 import uuid
 from ctypes import cdll
-from time import sleep
 from utils import get_config_name, read_json_file, write_json_file
+from run_model import run as run_model
 
 def createModelTempFile(models):
     model_files = []
@@ -52,6 +51,8 @@ def main():
     models = experiment_config.get('models', [])
     model_pids = []
     model_processes = []
+    q_in_list = []
+    q_out_list = []
     log_files = []
     model_files = createModelTempFile(models)
     for i, model_file in enumerate(model_files):
@@ -65,6 +66,7 @@ def main():
         log_files.append(logfile)
         # hooks configuration
         process_env = os.environ.copy()
+        env_bkp = os.environ.copy()
         control = model['control']['control']
         controlSync = model['control']['controlsync']
         controlEvent = model['control']['controlEvent']
@@ -84,41 +86,56 @@ def main():
             process_env['LD_PRELOAD'] = os.path.abspath(
                 "../intercept-lib/build/lib/libcuinterpose_event.so")
             process_env['EVENT_GROUP_SIZE'] = str(model['control']['queue_limit']['event_group'])
+        os.environ = process_env
 
         # run each model as a process
-        if 'codegen' in model['model_name']:
-            cmd = [model['python_path'],
-                   '-m', 'jaxformer.hf.sample',
-                   '--model', model['model_weight'],
-                   '--context', '"def hello_world():"',
-                   '--batch-size', str(model['batch_size']),
-                   '--max-length', '2',
-                   '--device', 'cuda:' + str(experiment_config["device_id"]),
-                   '--output_file_path',
-                   os.path.abspath(model['output_file_path']),
-                   '--output_file_name', model['output_file_name'], '--control', '--priority', str(model['priority'])]
-            cwd = model['repo_path']
-        else:
-            cmd = ['python', 'src/run_model.py', model_file.name,
-                   str(experiment_config.get('device_id'))]
-            cwd = '.'
-        model_process = subprocess.Popen(
-            cmd, cwd=cwd, stdout=logfile,
-            stderr=logfile, env=process_env)
+        # if 'codegen' in model['model_name']:
+        #     cmd = [model['python_path'],
+        #            '-m', 'jaxformer.hf.sample',
+        #            '--model', model['model_weight'],
+        #            '--context', '"def hello_world():"',
+        #            '--batch-size', str(model['batch_size']),
+        #            '--max-length', '2',
+        #            '--device', 'cuda:' + str(experiment_config["device_id"]),
+        #            '--output_file_path',
+        #            os.path.abspath(model['output_file_path']),
+        #            '--output_file_name', model['output_file_name'], '--control', '--priority', str(model['priority'])]
+        #     cwd = model['repo_path']
+        # else:
+        #     cmd = ['python', 'src/run_model.py', model_file.name,
+        #            str(experiment_config.get('device_id'))]
+        #     cwd = '.'
+        # model_process = subprocess.Popen(
+        #     cmd, cwd=cwd, stdout=logfile,
+        #     stderr=logfile, env=process_env)
+        q_in = mp.Queue()
+        q_out = mp.Queue()
+        model_process = mp.Process(target=run_model,
+                   args=(model_file.name, experiment_config.get('device_id'),
+                         q_in, q_out, experiment_config.get('exp_dur')))
         # record model's PID
         model_name = get_config_name(model)
         model_pids.append((model_name, model_process.pid))
         model_processes.append(model_process)
+        q_in_list.append(q_in)
+        q_out_list.append(q_out)
 
-    #Stop each model at given experiment duration exhausted
-    exp_duration = experiment_config.get('exp_dur')
-    sleep(exp_duration)
-    for i, p in enumerate(model_processes):
-        # p.wait()
-        logfile = log_files[i]
-        logfile.flush()
-        p.send_signal(signal.SIGKILL)
-        logfile.close()
+        print(i, model_process.pid, 'start')
+        model_process.start()
+        os.environ = env_bkp
+
+    # guarantee model is loaded
+    for i, queue in enumerate(q_out_list):
+        msg = queue.get()
+        assert msg == 'loaded'
+        print(i, msg)
+
+    for i, queue in enumerate(q_in_list):
+        queue.put('run')
+
+    for i, proc in enumerate(model_processes):
+        proc.join()
+
     destroyModelTempFile(model_files)
 
     # Write out.log
@@ -129,4 +146,5 @@ def main():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('fork')
     main()

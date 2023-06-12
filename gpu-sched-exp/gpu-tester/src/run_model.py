@@ -4,7 +4,7 @@ import json
 import os
 import signal
 import sys
-from time import perf_counter_ns, sleep
+from time import perf_counter_ns, sleep, time
 import torch
 from utils import read_json_file
 from vision_model import VisionModel
@@ -91,9 +91,10 @@ class SchedulerTester():
         self.csv_fh.flush()
         return res
 
-    def run(self):
+    def run(self, dur):
+        t_start = time()
         sleep_dur = self.config['sleep_time']
-        while RUNNING:
+        while (time() - t_start) < dur:
             torch.cuda.nvtx.range_push("regionTest")
             self.infer()
             sys.stdout.flush()
@@ -101,8 +102,33 @@ class SchedulerTester():
             sleep(sleep_dur)
 
 
+def run(config_fname, device_id, q_in, q_out, dur):
+    print(os.getpid(), os.environ['ID'])
+    print(os.getpid(), os.environ['LD_LIBRARY_PATH'])
+    print(os.getpid(), os.environ['LD_PRELOAD'])
+    # signal.signal(signal.SIGINT, signal_handler)
+    config = read_json_file(config_fname)
+    print("Device", device_id)
+    # set the directory for downloading models
+    torch.hub.set_dir("../torch_cache/")
+    # set the cuda device to use
+    torch.cuda.set_device(device_id)
+    tester: SchedulerTester = SchedulerTester(
+        config['control']['control'], config, device_id)
+    q_out.put('loaded')
+    print(os.getpid(), 'put loaded')
+    msg = q_in.get()
+    if msg == 'run':
+        pass
+    else:
+        print('fuck', os.getpid(), msg)
+        return
+    print(os.getpid(), 'run')
+    tester.run(dur)
+
+
 def main():
-    signal.signal(signal.SIGINT, signal_handler)
+    # signal.signal(signal.SIGINT, signal_handler)
     # Get input model configuration file path
     parser = argparse.ArgumentParser(description="Run a model's inference job")
     parser.add_argument('filename', type=str,
@@ -130,7 +156,8 @@ def main():
     tester: SchedulerTester = SchedulerTester(
         data['control']['control'], data, device_id)
     sleep(1)
-    tester.run()
+    dur = 30
+    tester.run(dur)
 
 
 if __name__ == "__main__":

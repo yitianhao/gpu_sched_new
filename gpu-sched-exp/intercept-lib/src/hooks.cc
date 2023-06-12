@@ -32,6 +32,7 @@ limitations under the License.
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include <nvtx3/nvToolsExt.h>
+#include "assert.h"
 // #include <ctime>
 
 using namespace std;
@@ -545,6 +546,8 @@ CUresult cuLaunchKernel_posthook(
 #endif
 #ifdef _SYNC_QUEUE
     //only add synchronization point to the long job.
+    printf("sync queue\n");
+    fflush(stdout);
     static int cnt = 0;
     if (cnt++ % SYNC_KERNELS == 0) {
         nvtxRangePushA("sync");
@@ -555,6 +558,9 @@ CUresult cuLaunchKernel_posthook(
 #endif
     }
 #endif
+    printf("hook\n");
+    fflush(stdout);
+    assert(false);
 	return ret;
 }
 
