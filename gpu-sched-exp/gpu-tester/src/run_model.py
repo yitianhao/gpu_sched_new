@@ -77,6 +77,7 @@ class SchedulerTester():
         self.csv_fh.close()
 
     def infer(self):
+        start_t: int = perf_counter_ns()
         res = None # res :torch.Tensor
         if self.lib is not None:
             try:
@@ -86,7 +87,6 @@ class SchedulerTester():
                 self.lib.waitForEmptyGPU()
             except Exception as e:
                 print(e)
-        start_t: int = perf_counter_ns()
         assert self.model is not None
         res = self.model()
         torch.cuda.synchronize()

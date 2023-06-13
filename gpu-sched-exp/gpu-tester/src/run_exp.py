@@ -9,7 +9,7 @@ import tempfile
 import uuid
 from ctypes import cdll
 from time import sleep
-from utils import get_config_name, read_json_file, write_json_file
+from utils import get_config_name, read_json_file, write_json_file, print_time
 
 def createModelTempFile(models):
     model_files = []
@@ -120,12 +120,12 @@ def main():
         if poll_result:
             msg = proc.stdout.readline()
             msg = msg.decode().rstrip()
-            print(proc.pid, msg, flush=True)
+            print('proc', proc.pid, msg, flush=True)
             if msg != "model loaded":
-                print(proc.pid, "bad msg", msg, flush=True)
+                print('proc', proc.pid, "bad msg", msg, flush=True)
                 break
         else:
-            print(f'{proc.pid} stdout poll timeout')
+            print(f'proc {proc.pid} stdout poll timeout', flush=True)
             break
 
     for proc in model_processes:
@@ -152,4 +152,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with print_time('run exp'):
+        main()
