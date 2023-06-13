@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 import numpy as np
 import torch
@@ -44,7 +45,7 @@ class VisionModel:
         else:
             raise ValueError("Unrecognized model weight and model name in "
                              "torchvision.")
-        with print_time('loading parameters'):
+        with print_time('loading parameters', sys.stderr):
             self.model: torch.nn.Module = model_cls(weights=self.weights).eval().cuda()
         self.resize_size = tuple(config['resize_size'])
         self.model_preprocess = self.weights.transforms()
