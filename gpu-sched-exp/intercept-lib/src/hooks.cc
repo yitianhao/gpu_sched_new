@@ -32,18 +32,16 @@ limitations under the License.
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include <nvtx3/nvToolsExt.h>
-// #include <ctime>
 
 using namespace std;
-// static named_semaphore sem(open_only, "named_semaphore");
-
-// static named_mutex mutex(open_or_create, "named_mutex");
+#define _SYNC_BEFORE_PREEMPT
 #ifdef _SCHEDULER_LOCK
 
-// static string username(getenv("USER"));
 static string suffix(getenv("SUFFIX")); // TODO: bug when genenv returns NULL
 static string named_mtx_name("named_mutex_" + suffix);
 static string named_cnd_name("named_cnd_" + suffix);
+static string named_mtx_dev_sync_name("named_mutex_dev_sync_" + suffix);
+static string named_cnd_dev_sync_name("named_cnd_dev_sync_" + suffix);
 
 static std::shared_ptr<boost::interprocess::shared_memory_object> shm_ptr;
 static std::shared_ptr<boost::interprocess::mapped_region> region_ptr;
@@ -51,6 +49,14 @@ static boost::interprocess::named_mutex named_mtx(
     boost::interprocess::open_only, named_mtx_name.c_str());
 static boost::interprocess::named_condition named_cnd(
     boost::interprocess::open_only, named_cnd_name.c_str());
+
+#ifdef _SYNC_BEFORE_PREEMPT
+static boost::interprocess::named_mutex named_mtx_dev_sync(
+    boost::interprocess::open_only, named_mtx_dev_sync_name.c_str());
+static boost::interprocess::named_condition named_cnd_dev_sync(
+    boost::interprocess::open_only, named_cnd_dev_sync_name.c_str());
+static volatile int *gpu_empty;
+#endif // _SYNC_BEFORE_PREEMPT
 
 static volatile int *current_process;
 
@@ -72,6 +78,9 @@ void init_shared_mem() {
     int *mem = static_cast<int*>(region_ptr->get_address());
 
     current_process = &mem[0];
+#ifdef _SYNC_BEFORE_PREEMPT
+    gpu_empty = &mem[1];
+#endif // _SYNC_BEFORE_PREEMPT
     #ifdef _VERBOSE_WENQING
 	timestamp = printUTCTime();
 	PrintThread{} << timestamp << " hook" << get_id() << " init_shared_mem exited" << std::endl;
@@ -357,11 +366,6 @@ CUresult cuLaunchKernel_hook(
 		blockDimZ;
     // kernel_launch_time++;
     // printf("%d %d\n", kernel_launch_time, get_id());
-#ifdef _VERBOSE_WENQING
-	char *timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpre entered" << std::endl;
-    free(timestamp);
-#endif
 
 #ifdef _GROUP_EVENT
     if (kernel_launch_time == 0) {
@@ -390,49 +394,34 @@ CUresult cuLaunchKernel_hook(
     if(shm_ptr == NULL || region_ptr == NULL) {
         init_shared_mem();
     }
-#ifdef _VERBOSE_WENQING
-    if (get_id() == 0) {
-	    char *timestamp = printUTCTime();
-	    PrintThread{} << timestamp << " hook" << get_id() << "kernelpre curr" << *current_process << std::endl;
-        free(timestamp);
-    }
-#endif
     if (get_id() == 0) {
         //job 1 is running, give way.
-#ifdef _VERBOSE_WENQING
-	    char *timestamp = printUTCTime();
-	    PrintThread{} << timestamp << " hook" << get_id() << "before loop" << *current_process << std::endl;
-        free(timestamp);
-#endif
         // https://www.boost.org/doc/libs/1_63_0/doc/html/thread/synchronization.html#thread.synchronization.condvar_ref
         bool pushed = false;
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         while(*current_process == 1) {
+#ifdef _SYNC_BEFORE_PREEMPT
+            cuStreamSynchronize(hStream);
+            {
+                boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock_dev_sync(named_mtx_dev_sync);
+                *gpu_empty = 1;
+                named_cnd_dev_sync.notify_one();
+            }
+#endif // _SYNC_BEFORE_PREEMPT
             if (!pushed) {
                 nvtxRangePushA("preemption");
                 pushed = true;
             }
-#ifdef _VERBOSE_WENQING
-	        char *timestamp = printUTCTime();
-	        PrintThread{} << timestamp << " hook" << get_id() << "in loop" << *current_process << std::endl;
-            free(timestamp);
-#endif
             named_cnd.wait(lock);
         }
         if (pushed) {
             nvtxRangePop();
         }
-#ifdef _VERBOSE_WENQING
-	    timestamp = printUTCTime();
-	    PrintThread{} << timestamp << " hook" << get_id() << "after loop" << *current_process << std::endl;
-        free(timestamp);
-#endif
+#ifdef _SYNC_BEFORE_PREEMPT
+        boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock_dev_sync(named_mtx_dev_sync);
+        *gpu_empty = 0;
+#endif // _SYNC_BEFORE_PREEMPT
     }
-#ifdef _VERBOSE_WENQING
-	timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpre exit" << std::endl;
-    free(timestamp);
-#endif
 #endif
 
 #ifdef _KERNEL_COUNT_WENQING
@@ -526,20 +515,6 @@ CUresult cuLaunchKernel_posthook(
     }
 #endif
 
-#ifdef _SCHEDULER_LOCK
-
-#ifdef _VERBOSE_WENQING
-	char *timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpost entered" << std::endl;
-    free(timestamp);
-#endif
-
-#endif
-#ifdef _VERBOSE_WENQING
-	timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpost exited" << std::endl;
-    free(timestamp);
-#endif
 #ifdef _KERNEL_TIMESTAMP_WENQING
 	PrintThread{} << getMicrosecUTCTime() << " " << get_id() << " kernelEnd" << std::endl;
 #endif
@@ -550,9 +525,6 @@ CUresult cuLaunchKernel_posthook(
         nvtxRangePushA("sync");
         cuStreamSynchronize(hStream);
         nvtxRangePop();
-#ifdef _VERBOSE_WENQING
-        PrintThread{} << getMicrosecUTCTime() << " " << cnt << " Sync" << std::endl;
-#endif
     }
 #endif
 	return ret;

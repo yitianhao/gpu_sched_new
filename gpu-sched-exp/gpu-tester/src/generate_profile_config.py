@@ -272,7 +272,8 @@ def main():
         else:
             w, h = 720, 1280
             config["resize_size"] = [w, h]
-            config["resize"] = True
+            # config["resize"] = True
+            config["resize"] = False
             name = f"{model_name}_{w}x{h}_sleep_time_{args.sleep_time}_batch_{args.batch}"
         config["output_file_name"] = name
         config["output_file_path"] = os.path.join(args.profile_save_dir, f"{args.workload}/{name}")

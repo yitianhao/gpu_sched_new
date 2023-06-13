@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 import torchvision
 
+from utils import print_time
 
 def read_img(img_path: str):
     img: np.ndarray = cv2.cvtColor(
@@ -43,7 +44,8 @@ class VisionModel:
         else:
             raise ValueError("Unrecognized model weight and model name in "
                              "torchvision.")
-        self.model: torch.nn.Module = model_cls(weights=self.weights).eval().cuda()
+        with print_time('loading parameters'):
+            self.model: torch.nn.Module = model_cls(weights=self.weights).eval().cuda()
         self.resize_size = tuple(config['resize_size'])
         self.model_preprocess = self.weights.transforms()
         img_path = self.config['input_file_path']

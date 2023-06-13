@@ -63,10 +63,13 @@ for idx, pair in enumerate(pairs):
         exp_config = {'models': model_configs, 'exp_dur': 90, 'device_id': idx % 3}
         print(idx, idx % 3)
         name = get_configs_name(exp_config)
+        # exp_config['models'][0]['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/{name}/device_sync_{sync}'
+        # exp_config['models'][1]['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/{name}/device_sync_{sync}'
         exp_config['models'][0]['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/{name}/sync_{sync}'
         exp_config['models'][1]['output_file_path'] = f'../results/datamirror/controlsync/model_pairs/{name}/sync_{sync}'
         print(name)
 
+        # save_dir = os.path.join("../model_pair_configs", f"device_{idx % 3}", f'{name}', f'device_sync_{sync}')
         save_dir = os.path.join("../model_pair_configs", f"device_{idx % 3}", f'{name}', f'sync_{sync}')
         os.makedirs(save_dir, exist_ok=True)
         write_json_file(os.path.join(save_dir, f'{name}.json'), exp_config)
