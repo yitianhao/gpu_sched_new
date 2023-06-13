@@ -361,11 +361,6 @@ CUresult cuLaunchKernel_hook(
 		blockDimZ;
     // kernel_launch_time++;
     // printf("%d %d\n", kernel_launch_time, get_id());
-#ifdef _VERBOSE_WENQING
-	char *timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpre entered" << std::endl;
-    free(timestamp);
-#endif
 
 #ifdef _GROUP_EVENT
     if (kernel_launch_time == 0) {
@@ -394,20 +389,8 @@ CUresult cuLaunchKernel_hook(
     if(shm_ptr == NULL || region_ptr == NULL) {
         init_shared_mem();
     }
-#ifdef _VERBOSE_WENQING
-    if (get_id() == 0) {
-	    char *timestamp = printUTCTime();
-	    PrintThread{} << timestamp << " hook" << get_id() << "kernelpre curr" << *current_process << std::endl;
-        free(timestamp);
-    }
-#endif
     if (get_id() == 0) {
         //job 1 is running, give way.
-#ifdef _VERBOSE_WENQING
-	    char *timestamp = printUTCTime();
-	    PrintThread{} << timestamp << " hook" << get_id() << "before loop" << *current_process << std::endl;
-        free(timestamp);
-#endif
         // https://www.boost.org/doc/libs/1_63_0/doc/html/thread/synchronization.html#thread.synchronization.condvar_ref
         bool pushed = false;
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
@@ -422,11 +405,6 @@ CUresult cuLaunchKernel_hook(
                 nvtxRangePushA("preemption");
                 pushed = true;
             }
-#ifdef _VERBOSE_WENQING
-	        char *timestamp = printUTCTime();
-	        PrintThread{} << timestamp << " hook" << get_id() << "in loop" << *current_process << std::endl;
-            free(timestamp);
-#endif
             named_cnd.wait(lock);
         }
         if (pushed) {
@@ -434,17 +412,7 @@ CUresult cuLaunchKernel_hook(
         }
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock_dev_sync(named_mtx_dev_sync);
         *gpu_empty = 0;
-#ifdef _VERBOSE_WENQING
-	    timestamp = printUTCTime();
-	    PrintThread{} << timestamp << " hook" << get_id() << "after loop" << *current_process << std::endl;
-        free(timestamp);
-#endif
     }
-#ifdef _VERBOSE_WENQING
-	timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpre exit" << std::endl;
-    free(timestamp);
-#endif
 #endif
 
 #ifdef _KERNEL_COUNT_WENQING
@@ -538,20 +506,6 @@ CUresult cuLaunchKernel_posthook(
     }
 #endif
 
-#ifdef _SCHEDULER_LOCK
-
-#ifdef _VERBOSE_WENQING
-	char *timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpost entered" << std::endl;
-    free(timestamp);
-#endif
-
-#endif
-#ifdef _VERBOSE_WENQING
-	timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << "kernelpost exited" << std::endl;
-    free(timestamp);
-#endif
 #ifdef _KERNEL_TIMESTAMP_WENQING
 	PrintThread{} << getMicrosecUTCTime() << " " << get_id() << " kernelEnd" << std::endl;
 #endif
@@ -562,9 +516,6 @@ CUresult cuLaunchKernel_posthook(
         nvtxRangePushA("sync");
         cuStreamSynchronize(hStream);
         nvtxRangePop();
-#ifdef _VERBOSE_WENQING
-        PrintThread{} << getMicrosecUTCTime() << " " << cnt << " Sync" << std::endl;
-#endif
     }
 #endif
 	return ret;

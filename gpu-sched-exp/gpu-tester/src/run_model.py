@@ -72,7 +72,6 @@ class SchedulerTester():
                 print('end waiting for empty GPU')
             except Exception as e:
                 print(e)
-        # torch.cuda.synchronize()  # make sure there is no time sharing between large job and small job
         start_t: int = perf_counter_ns()
         res = self.model()
         torch.cuda.synchronize()
