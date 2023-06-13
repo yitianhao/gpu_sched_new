@@ -1,9 +1,10 @@
 import argparse
 import json
-import subprocess
-import signal
-import sys
 import os
+import select
+import signal
+import subprocess
+import sys
 import tempfile
 import uuid
 from ctypes import cdll
@@ -48,7 +49,7 @@ def main():
     suffix = uuid.uuid4().hex
     lib.create_shared_mem_and_locks(suffix.encode())
 
-    #Run each model
+    # Run each model
     models = experiment_config.get('models', [])
     model_pids = []
     model_processes = []
@@ -69,13 +70,8 @@ def main():
         controlSync = model['control']['controlsync']
         controlEvent = model['control']['controlEvent']
         if (control):
-            # process_env['ALNAIR_VGPU_COMPUTE_PERCENTILE'] = "99"
-            # process_env['CGROUP_DIR'] = "../alnair"
             process_env['ID'] = str(model['priority'])
             process_env['SUFFIX'] = suffix
-            # process_env['UTIL_LOG_PATH'] = "sched_tester2_sm_util.log"
-            # process_env['LD_PRELOAD'] = os.path.abspath(os.path.join(
-            #     "../intercept-lib/build/lib/libcuinterpose.so"))
         if (control and controlSync):
             process_env['LD_PRELOAD'] = os.path.abspath(
                 "../intercept-lib/build/lib/libcuinterpose_sync.so")
@@ -100,17 +96,43 @@ def main():
             cwd = model['repo_path']
         else:
             cmd = ['python', 'src/run_model.py', model_file.name,
-                   str(experiment_config.get('device_id'))]
+                   str(experiment_config.get('device_id')),
+                   '--sync-model-load']
             cwd = '.'
+        # model_process = subprocess.Popen(
+        #     cmd, cwd=cwd, stdout=logfile,
+        #     stderr=logfile, env=process_env)
         model_process = subprocess.Popen(
-            cmd, cwd=cwd, stdout=logfile,
+            cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=logfile, env=process_env)
         # record model's PID
         model_name = get_config_name(model)
         model_pids.append((model_name, model_process.pid))
         model_processes.append(model_process)
 
-    #Stop each model at given experiment duration exhausted
+    # the following msg exchange synchronize all processes load DNN models
+    # first and then start to run.
+    # the msg exchange aims to avoid super time consuming model loading caused
+    # by GPU resource contention between model loading in one process and
+    # model execution in another process.
+    for proc in model_processes:
+        poll_result = select.select([proc.stdout], [], [], 120)[0]
+        if poll_result:
+            msg = proc.stdout.readline()
+            msg = msg.decode().rstrip()
+            print(proc.pid, msg, flush=True)
+            if msg != "model loaded":
+                print(proc.pid, "bad msg", msg, flush=True)
+                break
+        else:
+            print(f'{proc.pid} stdout poll timeout')
+            break
+
+    for proc in model_processes:
+        proc.stdin.write(b'run\n')
+        proc.stdin.flush()
+
+    # Stop each model at given experiment duration exhausted
     exp_duration = experiment_config.get('exp_dur')
     sleep(exp_duration)
     for i, p in enumerate(model_processes):
