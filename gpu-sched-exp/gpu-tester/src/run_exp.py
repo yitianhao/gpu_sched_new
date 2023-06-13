@@ -117,7 +117,8 @@ def main():
         # p.wait()
         logfile = log_files[i]
         logfile.flush()
-        p.send_signal(signal.SIGKILL)
+        p.send_signal(signal.SIGINT)
+        # p.send_signal(signal.SIGKILL)
         logfile.close()
     destroyModelTempFile(model_files)
 
