@@ -10,6 +10,7 @@ import torch
 from utils import read_json_file
 from vision_model import VisionModel
 from transformer_model import TransformerModel
+from utils import print_time
 
 # Wenqing: Import an ad-hoc iFPC injected c++ set mem
 from ctypes import cdll
@@ -59,7 +60,8 @@ class SchedulerTester():
             ['start_timestamp_ns', 'end_timestamp_ns', 'jct_ms',
              'max_allocated_gpu_memory_allocated_byte',
              'max_reserved_gpu_memory_byte'])
-        debug_print("model loaded")
+        with print_time("dummy run", file=sys.stderr):
+            self.infer() # dummy run to warm up the gpu
         if sync_model_load:
             print("model loaded", file=sys.stdout, flush=True)
             poll_result = select.select([sys.stdin], [], [], 120)[0]
@@ -81,9 +83,7 @@ class SchedulerTester():
                 suffix = os.getenv("SUFFIX", None)
                 assert suffix is not None
                 self.lib.setMem(1, suffix.encode())
-                print('start to wait for empty GPU')
                 self.lib.waitForEmptyGPU()
-                print('end waiting for empty GPU')
             except Exception as e:
                 print(e)
         start_t: int = perf_counter_ns()

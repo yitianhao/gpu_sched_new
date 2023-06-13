@@ -55,7 +55,7 @@ class print_time:
         self.file = file
 
     def __enter__(self):
-        print(self.desc)
+        print(self.desc, file=self.file)
         self.t = time.time()
 
     def __exit__(self, type, value, traceback):
