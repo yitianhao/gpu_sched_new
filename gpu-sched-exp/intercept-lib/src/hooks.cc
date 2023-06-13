@@ -32,15 +32,10 @@ limitations under the License.
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include <nvtx3/nvToolsExt.h>
-// #include <ctime>
 
 using namespace std;
-// static named_semaphore sem(open_only, "named_semaphore");
-
-// static named_mutex mutex(open_or_create, "named_mutex");
 #ifdef _SCHEDULER_LOCK
 
-// static string username(getenv("USER"));
 static string suffix(getenv("SUFFIX")); // TODO: bug when genenv returns NULL
 static string named_mtx_name("named_mutex_" + suffix);
 static string named_cnd_name("named_cnd_" + suffix);
@@ -417,7 +412,7 @@ CUresult cuLaunchKernel_hook(
         bool pushed = false;
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(named_mtx);
         while(*current_process == 1) {
-            cudaDeviceSynchronize();
+            cuStreamSynchronize(hStream);
             {
                 boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock_dev_sync(named_mtx_dev_sync);
                 *gpu_empty = 1;
