@@ -1,7 +1,8 @@
 import collections
 import json
-import time
 import re
+import sys
+import time
 import numpy as np
 import yaml
 import pandas as pd
@@ -49,15 +50,16 @@ def get_jcts_from_profile(profile_filename):
 
 
 class print_time:
-    def __init__(self, desc):
+    def __init__(self, desc, file=sys.stdout):
         self.desc = desc
+        self.file = file
 
     def __enter__(self):
         print(self.desc)
         self.t = time.time()
 
     def __exit__(self, type, value, traceback):
-        print(f'{self.desc} took {time.time()-self.t:.02f}s')
+        print(f'{self.desc} took {time.time()-self.t:.02f}s', file=self.file)
 
 def get_config_name(config):
     if "resize_size" in config:

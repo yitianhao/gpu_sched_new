@@ -94,7 +94,7 @@ int get_start_time() {
     struct timespec timespc;
     clock_gettime(CLOCK_REALTIME, &timespc);
     float cur = (timespc.tv_sec * 1000000000 + timespc.tv_nsec) / 1000 % 100000000 / 1000.0;
-    printf("Starting at %f, id =  %d\n", cur, get_id());
+    // printf("Starting at %f, id =  %d\n", cur, get_id());
     return 1;
 }
 
