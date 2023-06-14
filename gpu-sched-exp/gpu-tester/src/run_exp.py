@@ -51,6 +51,7 @@ def main():
 
     # Run each model
     models = experiment_config.get('models', [])
+    exp_duration = experiment_config.get('exp_dur')
     model_pids = []
     model_processes = []
     log_files = []
@@ -97,6 +98,7 @@ def main():
         else:
             cmd = ['python', 'src/run_model.py', model_file.name,
                    str(experiment_config.get('device_id')),
+                   str(exp_duration),
                    '--sync-model-load']
             cwd = '.'
         # model_process = subprocess.Popen(
@@ -133,14 +135,12 @@ def main():
         proc.stdin.flush()
 
     # Stop each model at given experiment duration exhausted
-    exp_duration = experiment_config.get('exp_dur')
-    sleep(exp_duration)
+    # sleep(exp_duration)
     for i, p in enumerate(model_processes):
-        # p.wait()
+        p.wait()
+        # p.send_signal(signal.SIGINT)
         logfile = log_files[i]
         logfile.flush()
-        p.send_signal(signal.SIGINT)
-        # p.send_signal(signal.SIGKILL)
         logfile.close()
     destroyModelTempFile(model_files)
 

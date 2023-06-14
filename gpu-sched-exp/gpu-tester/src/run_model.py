@@ -5,7 +5,7 @@ import os
 import select
 import signal
 import sys
-from time import perf_counter_ns, sleep
+from time import perf_counter_ns, sleep, time
 import torch
 from utils import read_json_file
 from vision_model import VisionModel
@@ -106,9 +106,10 @@ class SchedulerTester():
         self.csv_fh.flush()
         return res
 
-    def run(self):
+    def run(self, dur=30):
         sleep_dur = self.config['sleep_time']
-        while RUNNING:
+        start_t = time()
+        while RUNNING and (time() - start_t < dur):
             torch.cuda.nvtx.range_push("regionTest")
             self.infer()
             sys.stdout.flush()
@@ -123,12 +124,15 @@ def main():
     parser.add_argument('filename', type=str,
                         help="Specifies the path to the model JSON file")
     parser.add_argument('deviceid', type=int, help="Specifies the gpu to run")
+    parser.add_argument('duration', type=int, help="Seconds to run after model"
+                        " loading and a dummy inference.")
     parser.add_argument('--sync-model-load', action="store_true",
                         help="Load model and wait until run message is "
                         "received to start execution. Default: do not wait.")
     args = parser.parse_args()
     filename = args.filename
     device_id = args.deviceid
+    dur = args.duration
 
     debug_print(f"proc {os.getpid()}, set Device {device_id}")
     # set the directory for downloading models
@@ -143,8 +147,7 @@ def main():
 
     tester: SchedulerTester = SchedulerTester(
         data['control']['control'], data, device_id, args.sync_model_load)
-    sleep(1)
-    tester.run()
+    tester.run(dur)
 
 
 if __name__ == "__main__":

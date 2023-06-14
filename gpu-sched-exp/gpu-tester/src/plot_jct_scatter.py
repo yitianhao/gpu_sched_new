@@ -142,6 +142,7 @@ def main():
     xvals_abs, xerrs_abs, yvals_abs, yerrs_abs = [], [], [], []
     model_A_name, model_B_name = "", ""
     texts = []
+    syncs = []
     for sync in args.syncs:
         try:
             model_A_log_fname, model_B_log_fname, model_pid = prepare_file_paths(
@@ -166,7 +167,7 @@ def main():
         else:
             print(f'Skip {model_A_log_fname}, no filtered model_A logs!')
 
-
+        syncs.append(sync)
         jcts = model_A_log['jct_ms']
         yvals_abs.append(np.mean(jcts))
         yerrs_abs.append(sem(jcts))
@@ -210,8 +211,8 @@ def main():
 
     with open(os.path.join(args.log_dir, "jct_scatter_plot.csv"), 'w') as f:
         hd = csv.writer(f, lineterminator='\n')
-        hd.writerow(["xvals_abs", "yvals_abs", "xerrs_abs", "yerrs_abs", "xvals", "yvals", "xerrs", "yerrs"])
-        hd.writerows(zip(xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, xvals, yvals, xerrs, yerrs))
+        hd.writerow(["sync", "xvals_abs", "yvals_abs", "xerrs_abs", "yerrs_abs", "xvals", "yvals", "xerrs", "yerrs"])
+        hd.writerows(zip(syncs, xvals_abs, yvals_abs, xerrs_abs, yerrs_abs, xvals, yvals, xerrs, yerrs))
 
 if __name__ == '__main__':
     main()

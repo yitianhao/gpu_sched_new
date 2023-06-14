@@ -22,7 +22,6 @@ for profile_config in $profile_configs; do
         --format=csv -l 1 -f ${save_folder}/smi_report.csv & pid=$!
     nsys profile -w true -t cuda,nvtx,osrt,cudnn,cublas -s process-tree \
         -o ${save_folder}/nsight_report -f true -e --cudabacktrace=true -x true \
-    timeout -s SIGINT 60 python src/run_model.py $profile_config $device
     kill $pid
     nsys stats -r kernexectrace,nvtxpptrace --format csv --force-export true \
             --force-overwrite true -o ${save_folder}/nsight_report \
@@ -30,4 +29,5 @@ for profile_config in $profile_configs; do
     python src/plot_nsys_report.py \
         -f ${save_folder}/nsight_report_kernexectrace.csv \
         -o ${save_folder}
+    python src/run_model.py $profile_config $device 30
 done
