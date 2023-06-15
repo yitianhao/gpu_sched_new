@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import os
+import select
 import signal
 import sys
 from time import perf_counter_ns, sleep
@@ -9,6 +10,7 @@ import torch
 from utils import read_json_file
 from vision_model import VisionModel
 from transformer_model import TransformerModel
+from utils import print_time
 
 # Wenqing: Import an ad-hoc iFPC injected c++ set mem
 from ctypes import cdll
@@ -20,9 +22,12 @@ def signal_handler(sig, frame):
     global RUNNING
     RUNNING = False
 
+def debug_print(msg):
+    print(msg, file=sys.stderr, flush=True)
+
 
 class SchedulerTester():
-    def __init__(self, control, config, device_id) -> None:
+    def __init__(self, control, config, device_id, sync_model_load) -> None:
         self.config = config
         self.device_id = device_id
         self.control = control
@@ -55,22 +60,34 @@ class SchedulerTester():
             ['start_timestamp_ns', 'end_timestamp_ns', 'jct_ms',
              'max_allocated_gpu_memory_allocated_byte',
              'max_reserved_gpu_memory_byte'])
+        with print_time("dummy run", file=sys.stderr):
+            self.infer() # dummy run to warm up the gpu
+        if sync_model_load:
+            print("model loaded", file=sys.stdout, flush=True)
+            poll_result = select.select([sys.stdin], [], [], 120)[0]
+            if poll_result:
+                msg = sys.stdin.readline().rstrip()
+                debug_print(msg)
+            else:
+                # continue to run anyway
+                return
 
     def __del__(self):
         self.csv_fh.flush()
         self.csv_fh.close()
 
     def infer(self):
+        start_t: int = perf_counter_ns()
         res = None # res :torch.Tensor
         if self.lib is not None:
             try:
                 suffix = os.getenv("SUFFIX", None)
                 assert suffix is not None
                 self.lib.setMem(1, suffix.encode())
+                self.lib.waitForEmptyGPU()
             except Exception as e:
                 print(e)
-        # torch.cuda.synchronize()  # make sure there is no time sharing between large job and small job
-        start_t: int = perf_counter_ns()
+        assert self.model is not None
         res = self.model()
         torch.cuda.synchronize()
         end_t: int = perf_counter_ns()
@@ -80,9 +97,7 @@ class SchedulerTester():
                 assert suffix is not None
                 self.lib.setMem(0, suffix.encode())
             except Exception as e:
-                print(e)
-            # read and print shared memory's current value
-            # lib.printCurr()
+                debug_print(e)
         max_alloc_mem_byte = torch.cuda.max_memory_allocated(self.device_id)
         max_rsrv_mem_byte = torch.cuda.max_memory_reserved(self.device_id)
         self.csv_writer.writerow([
@@ -108,27 +123,26 @@ def main():
     parser.add_argument('filename', type=str,
                         help="Specifies the path to the model JSON file")
     parser.add_argument('deviceid', type=int, help="Specifies the gpu to run")
+    parser.add_argument('--sync-model-load', action="store_true",
+                        help="Load model and wait until run message is "
+                        "received to start execution. Default: do not wait.")
     args = parser.parse_args()
     filename = args.filename
     device_id = args.deviceid
 
-    print("Device", device_id)
+    debug_print(f"proc {os.getpid()}, set Device {device_id}")
     # set the directory for downloading models
     torch.hub.set_dir("../torch_cache/")
     # set the cuda device to use
     torch.cuda.set_device(device_id)
     try:
-        print(f"run_model.py: parsing file: {filename}")
         data = read_json_file(filename)
-        print(f"Model: {data['model_name']}")
-        print("Fields:")
-        print(json.dumps(data, indent=4))
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        print(f"Invalid input file.", file=sys.stderr)
+        debug_print(f"Invalid input file.")
         sys.exit(1)
 
     tester: SchedulerTester = SchedulerTester(
-        data['control']['control'], data, device_id)
+        data['control']['control'], data, device_id, args.sync_model_load)
     sleep(1)
     tester.run()
 

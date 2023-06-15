@@ -13,10 +13,16 @@
 
 using namespace std;
 
+#define _SYNC_BEFORE_PREEMPT
 static std::shared_ptr<boost::interprocess::shared_memory_object> shm_ptr;
 static std::shared_ptr<boost::interprocess::mapped_region> region_ptr;
 static std::shared_ptr<boost::interprocess::named_mutex> named_mtx_ptr;
 static std::shared_ptr<boost::interprocess::named_condition> named_cnd_ptr;
+#ifdef _SYNC_BEFORE_PREEMPT
+static std::shared_ptr<boost::interprocess::named_mutex> named_mtx_dev_sync_ptr;
+static std::shared_ptr<boost::interprocess::named_condition> named_cnd_dev_sync_ptr;
+static volatile int *gpu_empty;
+#endif // _SYNC_BEFORE_PREEMPT
 
 static volatile int *current_process;
 
@@ -48,6 +54,20 @@ extern "C" void create_shared_mem_and_locks(char* suffix) {
         named_cnd_ptr = make_shared<boost::interprocess::named_condition>(
             boost::interprocess::create_only, named_cnd_name.c_str());
     }
+
+#ifdef _SYNC_BEFORE_PREEMPT
+    if (named_mtx_dev_sync_ptr == NULL) {
+        std::string named_mtx_name("named_mutex_dev_sync_" + suffix_str);
+        named_mtx_dev_sync_ptr = make_shared<boost::interprocess::named_mutex>(
+            boost::interprocess::create_only, named_mtx_name.c_str());
+    }
+
+    if (named_cnd_dev_sync_ptr == NULL) {
+        std::string named_cnd_name("named_cnd_dev_sync_" + suffix_str);
+        named_cnd_dev_sync_ptr = make_shared<boost::interprocess::named_condition>(
+            boost::interprocess::create_only, named_cnd_name.c_str());
+    }
+#endif // _SYNC_BEFORE_PREEMPT
 }
 
 extern "C" void remove_shared_mem_and_locks(char* suffix) {
@@ -66,6 +86,18 @@ extern "C" void remove_shared_mem_and_locks(char* suffix) {
         std::string named_cnd_name("named_cnd_" + suffix_str);
         boost::interprocess::named_condition::remove(named_cnd_name.c_str());
     }
+
+#ifdef _SYNC_BEFORE_PREEMPT
+    if (named_mtx_dev_sync_ptr != NULL) {
+        std::string named_mtx_name("named_mutex_dev_sync_" + suffix_str);
+        boost::interprocess::named_mutex::remove(named_mtx_name.c_str());
+    }
+
+    if (named_cnd_dev_sync_ptr != NULL) {
+        std::string named_cnd_name("named_cnd_dev_sync_" + suffix_str);
+        boost::interprocess::named_condition::remove(named_cnd_name.c_str());
+    }
+#endif // _SYNC_BEFORE_PREEMPT
 }
 
 
@@ -83,6 +115,9 @@ extern "C" void setMem(int input, char* suffix) {
             *shm_ptr, boost::interprocess::read_write);
         int *mem = static_cast<int*>(region_ptr->get_address());
         current_process = &mem[0];
+#ifdef _SYNC_BEFORE_PREEMPT
+        gpu_empty = &mem[1];
+#endif // _SYNC_BEFORE_PREEMPT
     }
     if (named_mtx_ptr == NULL) {
         std::string named_mtx_name("named_mutex_" + suffix_str);
@@ -94,6 +129,21 @@ extern "C" void setMem(int input, char* suffix) {
         named_cnd_ptr = make_shared<boost::interprocess::named_condition>(
             boost::interprocess::open_only, named_cnd_name.c_str());
     }
+
+#ifdef _SYNC_BEFORE_PREEMPT
+    if (named_mtx_dev_sync_ptr == NULL) {
+        std::string named_mtx_name("named_mutex_dev_sync_" + suffix_str);
+        named_mtx_dev_sync_ptr = make_shared<boost::interprocess::named_mutex>(
+            boost::interprocess::open_only, named_mtx_name.c_str());
+    }
+
+    if (named_cnd_dev_sync_ptr == NULL) {
+        std::string named_cnd_name("named_cnd_dev_sync_" + suffix_str);
+        named_cnd_dev_sync_ptr = make_shared<boost::interprocess::named_condition>(
+            boost::interprocess::open_only, named_cnd_name.c_str());
+    }
+#endif // _SYNC_BEFORE_PREEMPT
+
     boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(
         *named_mtx_ptr);
     // https://en.cppreference.com/w/cpp/thread/condition_variable
@@ -101,6 +151,16 @@ extern "C" void setMem(int input, char* suffix) {
     if (input == 0) {
         named_cnd_ptr->notify_one();
     }
+}
+
+extern "C" void waitForEmptyGPU()
+{
+#ifdef _SYNC_BEFORE_PREEMPT
+    boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(*named_mtx_dev_sync_ptr);
+    while(! (*gpu_empty)) {
+        named_cnd_dev_sync_ptr->wait(lock);
+    }
+#endif // _SYNC_BEFORE_PREEMPT
 }
 
 extern "C" void printCurr()
