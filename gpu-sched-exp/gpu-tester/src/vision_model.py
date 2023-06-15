@@ -39,7 +39,7 @@ class VisionModel:
             os.environ['RESIZE'] = "true"
         else:
             os.environ['RESIZE'] = "false"
-        sync_level = self.config['sync_level']
+        sync_level = self.config.get('sync_level', "")
 
         if getattr(torchvision.models.segmentation, model_weight, False):
             # a model from torchvision.models.segmentation
@@ -50,10 +50,12 @@ class VisionModel:
             self.weights = getattr(torchvision.models.detection, model_weight).DEFAULT
             model_cls = getattr(torchvision.models.detection, model_name)
         elif getattr(torchvision.models, model_weight, False):
-            # a model from torchvision.models or terminated with an excepton
+            # a model from torchvision.models or terminated with an exception
             self.weights = getattr(torchvision.models, model_weight).DEFAULT
             model_cls = getattr(torchvision.models, model_name)
         else:
+            print(f"Unrecognized model weight {model_weight} and model name "
+                  f"{model_name} in torchvision.", file=sys.stderr, flush=True)
             raise ValueError("Unrecognized model weight and model name in "
                              "torchvision.")
         with print_time('loading parameters', sys.stderr):

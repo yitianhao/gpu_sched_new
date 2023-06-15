@@ -91,7 +91,7 @@ def main():
                    '--batch-size', str(model['batch_size']),
                    '--max-length', '2',
                    '--device', 'cuda:' + str(experiment_config["device_id"]),
-                   '--sync-level', str(model['sync_level']),
+                   '--sync-level', str(model.get('sync_level', "")),
                    '--output_file_path',
                    os.path.abspath(model['output_file_path']),
                    '--output_file_name', model['output_file_name'], '--control', '--priority', str(model['priority'])]
@@ -104,7 +104,7 @@ def main():
                    '--batch-size', str(model['batch_size']),
                    '--max-length', '2',
                    '--device', 'cuda:' + str(experiment_config["device_id"]),
-                   '--sync-level', str(model['sync_level']),
+                   '--sync-level', str(model.get('sync_level', "")),
                    '--output_file_path',
                    os.path.abspath(model['output_file_path']),
                    '--output_file_name', model['output_file_name'], '--control', '--priority', str(model['priority'])]
