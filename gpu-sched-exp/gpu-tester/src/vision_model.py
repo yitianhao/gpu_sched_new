@@ -16,6 +16,16 @@ def read_img(img_path: str):
     # return torchvision.transforms.ToTensor()(image)
 
 class VisionModel:
+    # https://github.com/netx-repo/PipeSwitch/blob/f321d399e501b79ad51da13074e2aecda36cb06a/pipeswitch/worker_common.py#L40
+    def insert_layer_level_sync(self, mod):
+        def hook_terminate(mod, input, output):
+            torch.cuda.synchronize()
+            print("added sync")
+        if len(list(mod.children())) == 0:
+            mod.register_forward_hook(hook_terminate)
+        else:
+            for child in mod.children():
+                self.insert_layer_level_sync(child)
 
     def __init__(self, config, device_id) -> None:
         self.config = config
@@ -29,6 +39,7 @@ class VisionModel:
             os.environ['RESIZE'] = "true"
         else:
             os.environ['RESIZE'] = "false"
+        sync_level = self.config['sync_level']
 
         if getattr(torchvision.models.segmentation, model_weight, False):
             # a model from torchvision.models.segmentation
@@ -47,6 +58,8 @@ class VisionModel:
                              "torchvision.")
         with print_time('loading parameters', sys.stderr):
             self.model: torch.nn.Module = model_cls(weights=self.weights).eval().cuda()
+        if sync_level == "layer":
+            self.insert_layer_level_sync(self.model)
         self.resize_size = tuple(config['resize_size'])
         self.model_preprocess = self.weights.transforms()
         img_path = self.config['input_file_path']
