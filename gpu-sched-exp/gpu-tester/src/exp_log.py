@@ -146,3 +146,7 @@ class GPUJobProfile:
 
     def get_kernel_exec_times(self, kernel_ids):
         return [self.mean_kernel_exec_time_map[id]['mean'] for id in kernel_ids]
+
+    def get_avg_kernel_exec_time(self):
+        return np.mean([self.mean_kernel_exec_time_map['id']['mean']
+                        for id in self.mean_kernel_exec_time_map])
