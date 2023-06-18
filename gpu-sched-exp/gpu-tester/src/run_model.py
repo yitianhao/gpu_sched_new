@@ -7,7 +7,7 @@ import signal
 import sys
 from time import perf_counter_ns, sleep, time
 import torch
-from utils import read_json_file
+from utils import read_json_file, write_json_file
 from vision_model import VisionModel
 from transformer_model import TransformerModel
 from utils import print_time
@@ -27,10 +27,10 @@ def debug_print(msg):
 
 
 class SchedulerTester():
-    def __init__(self, control, config, device_id, sync_model_load) -> None:
+    def __init__(self, config, device_id, sync_model_load) -> None:
         self.config = config
         self.device_id = device_id
-        self.control = control
+        self.control = config['control']['control']
         self.priority = config['priority']
         if self.control and self.priority > 0:
             # only load library when needed
@@ -140,13 +140,19 @@ def main():
     # set the cuda device to use
     torch.cuda.set_device(device_id)
     try:
-        data = read_json_file(filename)
+        config = read_json_file(filename)
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         debug_print(f"Invalid input file.")
         sys.exit(1)
 
+    # save a copy of config file in the output directory
+    os.makedirs(config['output_file_path'], exist_ok=True)
+    write_json_file(
+        os.path.join(config['output_file_path'], os.path.basename(filename)),
+        config)
+
     tester: SchedulerTester = SchedulerTester(
-        data['control']['control'], data, device_id, args.sync_model_load)
+        config, device_id, args.sync_model_load)
     tester.run(dur)
 
 
