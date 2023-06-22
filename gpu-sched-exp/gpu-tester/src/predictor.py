@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+
 from exp_log import GPUJobProfile
 
 
@@ -21,7 +23,7 @@ class Predictor:
         delay_sum_list = []
         for sync in sync_freqs:
             exe_delay = self.predict_execution_delay(sync)
-            preemption_delay = self.predict_preemption_delay()
+            preemption_delay = self.predict_preemption_delay(sync)
             delay_sum_list.append(exe_delay + preemption_delay)
         idx = np.argmin(delay_sum_list)
         return sync_freqs[idx]
@@ -33,4 +35,4 @@ class Predictor:
     def predict_execution_delay(self, sync_freq):
         """Predict execution delay in ms."""
         n_sync_calls = len(self.model_A_prof) / sync_freq
-        return = 0.0115 * nsync_calls + 2.92 # TODO: verify correctness
+        return 0.0115 * n_sync_calls + 2.92 # TODO: verify correctness

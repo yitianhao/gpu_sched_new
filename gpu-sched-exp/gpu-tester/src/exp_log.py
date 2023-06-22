@@ -1,8 +1,10 @@
 import os
+import subprocess as sp
 from typing import Optional
 import pandas as pd
 import numpy as np
 from utils import read_json_file, write_json_file
+from plot_jct_scatter import filter_log
 
 def json_keys2int(x):
     if isinstance(x, dict):
@@ -12,6 +14,21 @@ def json_keys2int(x):
 class GPUSchedExpLog:
     def __init__(self, nsys_kernel_trace: str, nsys_nvtx_trace: str,
                  model_A_jct_log: str, model_B_jct_log: str, pid_log: str):
+        save_folder = os.path.dirname(nsys_kernel_trace)
+        nsys_rep_file = os.path.join(save_folder, "nsight_report.nsys-rep")
+        if (not os.path.exists(nsys_kernel_trace) or
+            not os.path.exists(nsys_nvtx_trace)) and \
+                    os.path.exists(nsys_rep_file):
+            # extract them
+            cmd = f"nsys stats -r kernexectrace,nvtxpptrace --format csv " \
+                  f"--force-export true --force-overwrite true" \
+                  f" -o {save_folder}/nsight_report " \
+                  f"{save_folder}/nsight_report.nsys-rep"
+            sp.run(cmd.split())
+
+            cmd = f"rm -r {save_folder}/nsight_report.sqlite"
+            sp.run(cmd.split())
+
         self.kernel_trace = pd.read_csv(nsys_kernel_trace)
         self.kernel_trace['Kernel End (ns)'] = \
             self.kernel_trace['Kernel Start (ns)'] + self.kernel_trace['Kernel Dur (ns)']
@@ -19,6 +36,10 @@ class GPUSchedExpLog:
 
         self.model_A_jct_log = pd.read_csv(model_A_jct_log)
         self.model_B_jct_log = pd.read_csv(model_B_jct_log)
+
+        # model A jct log with jcts having no collision with model B's job
+        self.model_A_jct_log_filtered = filter_log(
+            self.model_A_jct_log.iloc[1:], self.model_B_jct_log.iloc[1:])
 
         self.models_pid = read_json_file(pid_log)
         # get model A GPU kernels
@@ -41,8 +62,23 @@ class GPUSchedExpLog:
             raise ValueError(f"model B job num kernels is {self.model_B_job_num_kernels}")
         print(f"Loaded {nsys_kernel_trace}")
 
+    def get_filtered_model_A_jct_ms(self):
+        return self.model_A_jct_log_filtered['jct_ms'].tolist()
+
+    def get_model_A_jct_ms(self):
+        return self.model_A_jct_log['jct_ms'][1:].tolist()
+
     def get_model_B_jct_ms(self):
         return self.model_B_jct_log['jct_ms'][1:].tolist()
+
+    def get_filtered_model_A_avg_jct_ms(self):
+        return self.model_A_jct_log_filtered['jct_ms'].mean()
+
+    def get_model_A_avg_jct_ms(self):
+        return self.model_A_jct_log['jct_ms'][1:].mean()
+
+    def get_model_B_avg_jct_ms(self):
+        return self.model_B_jct_log['jct_ms'][1:].mean()
 
     def get_kernel_queue(self):
         """Get a list of kernel ids of model A GPU kernels in queue when model
@@ -90,7 +126,7 @@ class GPUJobProfile:
                  cache: bool = True, overwrite=True):
         self.nsys_kernel_profile = nsys_kernel_profile
         self.nsys_nvtx_profile = nsys_nvtx_profile
-        self.jct_profile = jct_profile
+        self.jct_profile_file = jct_profile
         folder = os.path.dirname(nsys_kernel_profile)
         cache_fname = os.path.join(folder, "kernel_exec_time_map.json")
         self.jct_profile = pd.read_csv(jct_profile)
@@ -148,5 +184,5 @@ class GPUJobProfile:
         return [self.mean_kernel_exec_time_map[id]['mean'] for id in kernel_ids]
 
     def get_avg_kernel_exec_time(self):
-        return np.mean([self.mean_kernel_exec_time_map['id']['mean']
+        return np.mean([self.mean_kernel_exec_time_map[id]['mean']
                         for id in self.mean_kernel_exec_time_map])
