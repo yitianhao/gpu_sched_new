@@ -124,6 +124,22 @@ class GPUJobProfile:
                  nsys_nvtx_profile: Optional[str] = None,
                  num_kernels: Optional[int] = None,
                  cache: bool = True, overwrite=True):
+
+        save_folder = os.path.dirname(nsys_kernel_profile)
+        nsys_rep_file = os.path.join(save_folder, "nsight_report.nsys-rep")
+
+        if (not os.path.exists(nsys_kernel_profile) or
+            (nsys_nvtx_profile is not None and not os.path.exists(nsys_nvtx_profile))) and \
+                    os.path.exists(nsys_rep_file):
+            cmd = f"nsys stats -r kernexectrace,nvtxpptrace --format csv " \
+                  f"--force-export true --force-overwrite true" \
+                  f" -o {save_folder}/nsight_report " \
+                  f"{save_folder}/nsight_report.nsys-rep"
+            sp.run(cmd.split())
+
+            cmd = f"rm -r {save_folder}/nsight_report.sqlite"
+            sp.run(cmd.split())
+
         self.nsys_kernel_profile = nsys_kernel_profile
         self.nsys_nvtx_profile = nsys_nvtx_profile
         self.jct_profile_file = jct_profile
@@ -155,6 +171,9 @@ class GPUJobProfile:
         if nsys_nvtx_profile is not None:
             self.nvtx_profile = pd.read_csv(nsys_nvtx_profile)
 
+        self.kernel_exec_times = [self.mean_kernel_exec_time_map[id]['mean']
+                                  for id in self.mean_kernel_exec_time_map]
+
     def _build_kernel_execution_time_map(self):
         self.kernel_exec_time_map = dict()  # map id to execution time in ns
         for i, (_, row) in enumerate(self.kernel_profile.iterrows()):
@@ -181,8 +200,10 @@ class GPUJobProfile:
         return self.jct_profile.iloc[1:]['jct_ms'].mean()
 
     def get_kernel_exec_times(self, kernel_ids):
-        return [self.mean_kernel_exec_time_map[id]['mean'] for id in kernel_ids]
+        return [self.kernel_exec_times[id] for id in kernel_ids]
 
-    def get_avg_kernel_exec_time(self):
-        return np.mean([self.mean_kernel_exec_time_map[id]['mean']
-                        for id in self.mean_kernel_exec_time_map])
+    def get_kernel_exec_time_mean(self):
+        return np.mean(self.kernel_exec_times)
+
+    def get_kernel_exec_time_percentile(self, percentile):
+        return np.percentile(self.kernel_exec_times, percentile)
