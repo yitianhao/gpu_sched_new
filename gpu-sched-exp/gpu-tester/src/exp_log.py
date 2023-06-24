@@ -152,6 +152,8 @@ class GPUJobProfile:
                 cache_fname)
             self.mean_kernel_exec_time_map = json_keys2int(self.mean_kernel_exec_time_map)
             self.num_kernels = len(self.mean_kernel_exec_time_map)
+            self.kernel_exec_times = [self.mean_kernel_exec_time_map[id]['mean']
+                                      for id in self.mean_kernel_exec_time_map]
             return
         self.kernel_profile = pd.read_csv(nsys_kernel_profile)
 
@@ -200,10 +202,13 @@ class GPUJobProfile:
         return self.jct_profile.iloc[1:]['jct_ms'].mean()
 
     def get_kernel_exec_times(self, kernel_ids):
+        """kernel execution time in ns."""
         return [self.kernel_exec_times[id] for id in kernel_ids]
 
     def get_kernel_exec_time_mean(self):
+        """kernel execution time in ns."""
         return np.mean(self.kernel_exec_times)
 
     def get_kernel_exec_time_percentile(self, percentile):
+        """kernel execution time in ns."""
         return np.percentile(self.kernel_exec_times, percentile)

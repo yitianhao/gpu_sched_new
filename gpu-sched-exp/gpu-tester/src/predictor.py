@@ -3,8 +3,11 @@ from typing import Optional
 from exp_log import GPUJobProfile
 
 
+SEC_IN_NS = 1e9
+SEC_IN_MS = 1e3
+
 class Predictor:
-    def __init__(self, model_A_prof, model_B_prof=Optional[GPUJobProfile]):
+    def __init__(self, model_A_prof, model_B_prof:Optional[GPUJobProfile] = None):
         self.model_A_prof = model_A_prof
         self.model_B_prof = model_B_prof
 
@@ -19,7 +22,7 @@ class Predictor:
 
     def predict_preemption_delay(self, sync_freq):
         """Predict preemption delay in ms."""
-        return sync_freq * self.model_A_prof.get_kernel_exec_time_mean()
+        return sync_freq * self.model_A_prof.get_kernel_exec_time_mean() / SEC_IN_NS * SEC_IN_MS
 
     def predict_execution_delay(self, sync_freq, a=0.0115, b=2.92):
         """Predict execution delay in ms."""
