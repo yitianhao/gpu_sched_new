@@ -108,12 +108,16 @@ class SchedulerTester():
 
     def run(self, dur=30):
         sleep_dur = self.config['sleep_time']
+        cnt = 0
         start_t = time()
-        while RUNNING and (time() - start_t < dur):
+
+        # make sure at least 10 jobs
+        while RUNNING and ((time() - start_t < dur) or cnt < 10):
             torch.cuda.nvtx.range_push("regionTest")
             self.infer()
             sys.stdout.flush()
             torch.cuda.nvtx.range_pop()
+            cnt += 1
             sleep(sleep_dur)
 
 
