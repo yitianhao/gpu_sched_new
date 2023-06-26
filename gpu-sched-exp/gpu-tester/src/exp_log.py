@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from utils import read_json_file, write_json_file
 from plot_jct_scatter import filter_log
+from plot_nsys_report import compute_queue
 
 def json_keys2int(x):
     if isinstance(x, dict):
@@ -123,7 +124,7 @@ class GPUJobProfile:
     def __init__(self, nsys_kernel_profile: str, jct_profile: str,
                  nsys_nvtx_profile: Optional[str] = None,
                  num_kernels: Optional[int] = None,
-                 cache: bool = True, overwrite=True):
+                 cache: bool = True, overwrite=False):
 
         save_folder = os.path.dirname(nsys_kernel_profile)
         nsys_rep_file = os.path.join(save_folder, "nsight_report.nsys-rep")
@@ -148,27 +149,50 @@ class GPUJobProfile:
         self.jct_profile = pd.read_csv(jct_profile)
         if (not overwrite) and cache and os.path.exists(cache_fname):
             # speed up profile log reading
-            self.mean_kernel_exec_time_map = read_json_file(
-                cache_fname)
+            profile_cache = read_json_file(cache_fname)
+            self.mean_kernel_exec_time_map = profile_cache["mean_kernel_exec_time_map"]
             self.mean_kernel_exec_time_map = json_keys2int(self.mean_kernel_exec_time_map)
             self.num_kernels = len(self.mean_kernel_exec_time_map)
             self.kernel_exec_times = [self.mean_kernel_exec_time_map[id]['mean']
                                       for id in self.mean_kernel_exec_time_map]
+            self.queue_ts = profile_cache["kernel_queue_timestamp"]
+            self.num_kernels_queued = profile_cache["kernel_queue"]
             return
         self.kernel_profile = pd.read_csv(nsys_kernel_profile)
+        # remove all 'None' values in Queue Start (ns)  and Queue Dur (ns) column
+        self.kernel_profile['Queue Start (ns)'].replace('None', np.nan, inplace=True)
+        self.kernel_profile['Queue Start (ns)'] = self.kernel_profile['Queue Start (ns)'].astype(float)
+
+        self.kernel_profile['Queue Dur (ns)'].replace('None', np.nan, inplace=True)
+        self.kernel_profile['Queue Dur (ns)'] = self.kernel_profile['Queue Dur (ns)'].astype(float)
+
+        self.kernel_profile['API End (ns)'] = self.kernel_profile['API Start (ns)'] + self.kernel_profile['API Dur (ns)']
+        self.kernel_profile['Kernel End (ns)'] = self.kernel_profile['Kernel Start (ns)'] + self.kernel_profile['Kernel Dur (ns)']
+        self.kernel_profile['End (ns)'] = self.kernel_profile['API Start (ns)'] + self.kernel_profile['Total Dur (ns)']
+
+        self.queue_ts, self.num_kernels_queued = compute_queue(
+            self.kernel_profile['API Start (ns)'].tolist(),
+            self.kernel_profile['Kernel End (ns)'].tolist())
 
         if num_kernels is None:
             self.num_kernels = len(self.kernel_profile.index) / len(self.jct_profile.index)
             if self.num_kernels.is_integer():
                 self.num_kernels = int(self.num_kernels)
             else:
-                raise ValueError(f"num kernels is {self.num_kernels}")
+                print(f"num kernels is {self.num_kernels}.\n{self.nsys_kernel_profile}\n{self.jct_profile_file}")
+
+                raise ValueError(f"num kernels is {self.num_kernels}.\n{self.nsys_kernel_profile}\n{self.jct_profile_file}")
         else:
             self.num_kernels = num_kernels
         self._build_kernel_execution_time_map()
         self._build_mean_kernel_execution_time_map()
         if overwrite or (cache and not os.path.exists(cache_fname)):
-            write_json_file(cache_fname, self.mean_kernel_exec_time_map)
+            profile_cache = {
+                "mean_kernel_exec_time_map": self.mean_kernel_exec_time_map,
+                "kernel_queue_timestamp": self.queue_ts,
+                "kernel_queue": self.num_kernels_queued
+            }
+            write_json_file(cache_fname, profile_cache)
 
         if nsys_nvtx_profile is not None:
             self.nvtx_profile = pd.read_csv(nsys_nvtx_profile)

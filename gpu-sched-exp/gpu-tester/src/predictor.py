@@ -22,7 +22,8 @@ class Predictor:
 
     def predict_preemption_delay(self, sync_freq):
         """Predict preemption delay in ms."""
-        return sync_freq * self.model_A_prof.get_kernel_exec_time_mean() / SEC_IN_NS * SEC_IN_MS
+        return min(sync_freq, max(self.model_A_prof.num_kernels_queued)) * \
+                self.model_A_prof.get_kernel_exec_time_mean() / SEC_IN_NS * SEC_IN_MS
 
     def predict_execution_delay(self, sync_freq, a=0.0115, b=2.92):
         """Predict execution delay in ms."""
