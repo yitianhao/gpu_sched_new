@@ -2,6 +2,10 @@ import time
 import torch
 from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer
 
+
+def is_transformer(model_name, model_weight):
+    return True
+
 def data():
     for i in range(1000):
         yield f"My example {i}"

@@ -15,6 +15,19 @@ def read_img(img_path: str):
     # image = Image.open(img_path).convert("RGB")
     # return torchvision.transforms.ToTensor()(image)
 
+def is_vision_model(model_name, model_weight):
+    if getattr(torchvision.models.segmentation, model_name, False) and \
+        getattr(torchvision.models.segmentation, model_weight, False):
+        return True
+    elif getattr(torchvision.models.detection, model_name, False) and \
+        getattr(torchvision.models.detection, model_weight, False):
+        return True
+    elif getattr(torchvision.models, model_name, False) and \
+        getattr(torchvision.models, model_weight, False):
+        return True
+    else:
+        return False
+
 class VisionModel:
     # https://github.com/netx-repo/PipeSwitch/blob/f321d399e501b79ad51da13074e2aecda36cb06a/pipeswitch/worker_common.py#L40
     def insert_layer_level_sync(self, mod):
