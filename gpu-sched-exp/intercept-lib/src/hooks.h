@@ -49,10 +49,6 @@ using namespace boost::interprocess;
 #define UTIL_LOG_PATH getenv("UTIL_LOG_PATH")
 #define GPU_CLOCK_KHZ 1400000
 
-//Wenqing: Option for Synchronization per kernels
-#ifdef _SYNC_QUEUE
-#define SYNC_KERNELS stoi(getenv("SYNC_KERNELS"))
-#endif
 // options for fill rate adjustment
 #define SAMPLE_PERIOD_NS 50 * MS_IN_NS
 #define ADJUST_ADD_CONST 50000
@@ -66,11 +62,11 @@ using namespace boost::interprocess;
 	debug_fill_rate(target_usage, cur_group_usage)
 #endif
 
-#define CUDA_CHECK(ret) cuda_assert((ret), false, __FILE__, __LINE__); 			
+#define CUDA_CHECK(ret) cuda_assert((ret), false, __FILE__, __LINE__);
 #define CUDA_CHECK_DONT_ABORT(ret)	 										\
 	cuda_assert((ret), true, __FILE__, __LINE__);
 
-#define NVML_CHECK(ret) nvml_assert((ret), false, __FILE__, __LINE__);				
+#define NVML_CHECK(ret) nvml_assert((ret), false, __FILE__, __LINE__);
 #define NVML_CHECK_DONT_ABORT(ret)  										\
 	nvml_assert((ret), true, __FILE__, __LINE__);
 
@@ -126,27 +122,21 @@ static int32_t kernel_launch_time = 0; 		// monitor the progress of the
 											// infernece
 
 // conditional define variables for debugging and profiling
-
-#ifdef _PROFILE_ELAPSED_TIME
-// const static int CNT_KERNER_CALL = 914;
-// const static int CNT_KERNER_CALL = 183;
-// const static int CNT_KERNER_CALL = 1461;
-const static int CNT_KERNER_CALL = 454;
-static cudaEvent_t cu_start[CNT_KERNER_CALL], cu_end[CNT_KERNER_CALL];
-static int* pts[CNT_KERNER_CALL];
-static cudaEvent_t cu_global_start;
-#endif
-
 #ifdef _VERBOSE_WENQING
 static char *timestamp;
 #endif
+
+// Option for Synchronization per kernels
+#ifdef _SYNC_QUEUE
+static int sync_kernels = std::stoi(getenv("SYNC_KERNELS"));
+#endif // _SYNC_QUEUE
 
 #ifdef _GROUP_EVENT
 const static int EVENT_POOL_SIZE  = 100;
 static cudaEvent_t cu_event_cycle[EVENT_POOL_SIZE];
 static int cur_event_idx = 0;
 static int queue_group_size = std::stoi(getenv("EVENT_GROUP_SIZE"));
-#endif
+#endif // _GROUP_EVENT
 
 static cudaEvent_t cu_dummy;
 
@@ -156,8 +146,8 @@ static int ID = -1;
 /**
  * Get the environment variable set before an instance of tester.py is called. The ID is used
  * to distinguish kernel launch functions from different python process with different ID.
- * NOTE: Each tester.py python process is in a separated environment, so their cuda calls 
- * intercepted by different instances of hooks in their process. 
+ * NOTE: Each tester.py python process is in a separated environment, so their cuda calls
+ * intercepted by different instances of hooks in their process.
 */
 int get_id() {
 	if(ID == -1) {
@@ -232,7 +222,7 @@ std::string getMicrosecUTCTime() {
 
 /**********************     Added by wenqing for timestamps logging End ******************/
 
-static std::string get_cgroup() 
+static std::string get_cgroup()
 {
 
 	#ifdef _VERBOSE_WENQING
@@ -265,7 +255,7 @@ static std::string get_cgroup()
 static size_t get_memory_limit() { return 24220 * MB; }
 
 // setting the compute limitation by setting the env var
-// ALNAIR_VGPU_COMPUTE_PERCENTILE 
+// ALNAIR_VGPU_COMPUTE_PERCENTILE
 static int get_compute_limit()
 {
 	#ifdef _VERBOSE_WENQING
@@ -279,7 +269,7 @@ static int get_compute_limit()
 	timestamp = printUTCTime();
 	PrintThread{} << timestamp << " hook" << get_id() << " get_compute_limit exited" << std::endl;
 	free(timestamp);
-	#endif	
+	#endif
     if (!var) {
         return 100;
     } else {
@@ -348,7 +338,7 @@ static void debug_fill_rate(uint32_t target_usage, uint32_t cur_group_usage)
 }
 
 static int get_gpu_compute_processes(
-		uint32_t *proc_count, nvmlProcessInfo_t *proc_infos) 
+		uint32_t *proc_count, nvmlProcessInfo_t *proc_infos)
 {
     nvmlReturn_t ret;
     nvmlDevice_t device;
@@ -505,7 +495,7 @@ static void* log_sm_util(void *args)
 static void *flush_sm_log(void *args)
 {
 	flush_sm_log_args *casted_args = (struct flush_sm_log_args *)args;
-	nvmlProcessUtilizationSample_t *samples = casted_args->samples; 
+	nvmlProcessUtilizationSample_t *samples = casted_args->samples;
 	uint32_t nproc = casted_args->num_proc;
 	uint64_t last_seen_us = casted_args->last_seen_us;
 	uint64_t offset_us = casted_args->offset_us;

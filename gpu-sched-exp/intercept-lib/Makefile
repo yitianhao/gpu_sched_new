@@ -13,10 +13,9 @@ CUDA_INCLUDE_DIR := $(shell readlink -f $(CUDA_BIN_DIR)/../include)
 # -D_RECORD_LAUNCH_TIMES
 # -D_CHANGE_ALLOC_TEST
 # -D_RECORD_UTIL
-# -D_PROFILE_ELAPSED_TIME
 # -D_VERBOSE_WENQING
 # -D_SYNC_QUEUE
-CXXFLAGS = -fPIC -O3 -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK  
+CXXFLAGS = -fPIC -O3 -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK
 CXXSYNCFLAGS = -fPIC -O3 -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK -D_SYNC_QUEUE
 CXXEVENTFLAGS = -fPIC -O3 -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK -D_GROUP_EVENT
 # Verbose for debugging
@@ -26,8 +25,8 @@ CXXEVENTFLAGS = -fPIC -O3 -D_DYN_ADJUST_FR -D_SCHEDULER_LOCK -D_GROUP_EVENT
 OBJ_FILES := $(addprefix $(OBJ_DIR)/, register_client.o hooks.o)
 OBJ_FILES_SYNC := $(addprefix $(OBJ_DIR)/, register_client.o hooks_sync.o)
 OBJ_FILES_EVENT := $(addprefix $(OBJ_DIR)/, register_client.o hooks_event.o)
-all : lib libsync libevent 
-.PHONY: all 
+all : lib libsync libevent
+.PHONY: all
 
 lib: $(OBJ_FILES) $(OBJ_DIR)/cuda_interpose.o
 	$(CXX) $^ -shared -fPIC  -L/usr/local/cuda/lib64 $(LDFLAGS) -lcuda -lcudart -lnvidia-ml -o $(LIB_DIR)/libcuinterpose.so -lrt -lpthread

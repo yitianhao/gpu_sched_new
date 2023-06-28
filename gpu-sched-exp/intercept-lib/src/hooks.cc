@@ -62,12 +62,6 @@ static volatile int *current_process;
 
 
 void init_shared_mem() {
-    #ifdef _VERBOSE_WENQING
-	char *timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << " init_shared_mem entered" << std::endl;
-    free(timestamp);
-	#endif
-
     string shm_name("MySharedMemory_" + suffix);
     shm_ptr = make_shared<boost::interprocess::shared_memory_object>(
         boost::interprocess::open_or_create, shm_name.c_str(),
@@ -81,11 +75,6 @@ void init_shared_mem() {
 #ifdef _SYNC_BEFORE_PREEMPT
     gpu_empty = &mem[1];
 #endif // _SYNC_BEFORE_PREEMPT
-    #ifdef _VERBOSE_WENQING
-	timestamp = printUTCTime();
-	PrintThread{} << timestamp << " hook" << get_id() << " init_shared_mem exited" << std::endl;
-    free(timestamp);
-	#endif
 }
 
 #endif
@@ -353,7 +342,7 @@ CUresult cuMipmappedArrayCreate_hook(
 }
 
 /**
- * Wenqing: Logic executed before intercepted cuLaunchKernel CUDA call.
+ * Executed before intercepted cuLaunchKernel CUDA call.
 */
 CUresult cuLaunchKernel_hook(
 		CUfunction f, uint32_t gridDimX, uint32_t gridDimY,
@@ -422,8 +411,7 @@ CUresult cuLaunchKernel_hook(
         *gpu_empty = 0;
 #endif // _SYNC_BEFORE_PREEMPT
     }
-#endif
-
+#endif // _SCHEDULER_LOCK
 #ifdef _KERNEL_COUNT_WENQING
     static float last = 0;
     struct timespec timespc;
@@ -444,33 +432,6 @@ CUresult cuLaunchKernel_hook(
         cudaEventCreate(&cu_dummy);
     }
 
-#ifdef _PROFILE_ELAPSED_TIME
-    float elapsed_time_ms = 0;
-    if (kernel_launch_time == 1) {
-        cudaEventCreate(&cu_global_start);
-        for (int i = 0; i < CNT_KERNER_CALL; i++) {
-            cudaEventCreate(&cu_start[i]);
-            cudaEventCreate(&cu_end[i]);
-        }
-    }
-
-    if((kernel_launch_time - 1) / CNT_KERNER_CALL == 15) {
-        if((kernel_launch_time - 1) % CNT_KERNER_CALL == 0) {
-            cudaEventRecord(cu_global_start, hStream);
-        }
-        cudaEventRecord(cu_start[(kernel_launch_time - 1) % CNT_KERNER_CALL], hStream);
-    }
-
-    //
-
-    // if(kernel_launch_time > 1) {
-    //     cudaEventSynchronize(cu_start);
-    //     cudaEventElapsedTime(&elapsed_time_ms, cu_end, cu_start);
-    //     printf("1 %d\t%s\t%d\t%f\n", get_id(), CGROUP_DIR, kernel_launch_time, elapsed_time_ms *
-    //             MS_IN_US);
-    // }
-
-#endif
 #ifdef _KERNEL_TIMESTAMP_WENQING
 	PrintThread{} << getMicrosecUTCTime() << " " << get_id() << " kernelStart" << std::endl;
 #endif
@@ -478,7 +439,7 @@ CUresult cuLaunchKernel_hook(
 }
 
 /**
- * Wenqing: Logic executed after cuLaunchKernel CUDA call.
+ * Executed after cuLaunchKernel CUDA call.
 */
 CUresult cuLaunchKernel_posthook(
 		CUfunction f, uint32_t gridDimX, uint32_t gridDimY,
@@ -487,33 +448,12 @@ CUresult cuLaunchKernel_posthook(
 		void** kernelParams, void** extra)
 {
 	CUresult ret = CUDA_SUCCESS;
-#ifdef _PROFILE_ELAPSED_TIME
-	float elapsed_time_ms = 0;
-
-    if(get_id() == 0 && (kernel_launch_time - 1) / CNT_KERNER_CALL == 15) {
-        cudaEventRecord(cu_end[(kernel_launch_time - 1) % CNT_KERNER_CALL], hStream);
-        pts[(kernel_launch_time - 1) % CNT_KERNER_CALL] = (int*)hStream;
-    }
-    if(get_id() == 0 && kernel_launch_time == CNT_KERNER_CALL * 20) {
-        float last_end = 0;
-        for (int i = 0; i <  CNT_KERNER_CALL; i++) {
-            float start_time = 0, end_time = 0;
-            cudaEventElapsedTime(&start_time, cu_global_start, cu_start[i]);
-            cudaEventElapsedTime(&end_time, cu_global_start, cu_end[i]);
-            // printf("%d-th kernel: time: (%f, %f), (%f, %f)\n", i, start_time, end_time, end_time - start_time, start_time - last_end);
-
-            printf("%f %f 0x%p\n", start_time, end_time, (void*)pts[i]);
-            last_end = end_time;
-        }
-    }
-#endif
-
 #ifdef _GROUP_EVENT
     if (kernel_launch_time % queue_group_size == 0) {
         cudaEventRecord(cu_event_cycle[cur_event_idx % EVENT_POOL_SIZE]);
         cur_event_idx++;
     }
-#endif
+#endif // _GROUP_EVENT
 
 #ifdef _KERNEL_TIMESTAMP_WENQING
 	PrintThread{} << getMicrosecUTCTime() << " " << get_id() << " kernelEnd" << std::endl;
@@ -521,12 +461,12 @@ CUresult cuLaunchKernel_posthook(
 #ifdef _SYNC_QUEUE
     //only add synchronization point to the long job.
     static int cnt = 0;
-    if (cnt++ % SYNC_KERNELS == 0) {
+    if (cnt++ % sync_kernels == 0) {
         nvtxRangePushA("sync");
         cuStreamSynchronize(hStream);
         nvtxRangePop();
     }
-#endif
+#endif // _SYNC_QUEUE
 	return ret;
 }
 
