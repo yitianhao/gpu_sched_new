@@ -77,13 +77,24 @@ def draw_subplot(ax, xvals, yvals, xerrs, yerrs, texts, model_A_name,
     ax.set_title(title)
 
 def filter_log(model_A_log, model_B_log):
+    """
+    Return:
+        unpreempted job A logs
+        preempted job A logs
+        unpreempting job B logs
+        preempting job B logs
+    """
     # filter out model_A jobs which are in collision with model_B jobs
+    print(model_B_log.shape)
+    preempting_mask = np.zeros(model_B_log.shape[0], dtype=bool)
     mask = np.ones(model_A_log.shape[0], dtype=bool)
-    for _, row in model_B_log.iterrows():
+    for idx, (_, row) in enumerate(model_B_log.iterrows()):
         m1 = model_A_log['start_timestamp_ns'] >= row['end_timestamp_ns']
         m2 = model_A_log['end_timestamp_ns'] <= row['start_timestamp_ns']
+        preempting_mask[idx] = ~((m1 | m2).all())
         mask = mask & (m1 | m2)
-    return model_A_log[mask]
+    return model_A_log[mask], model_A_log[~mask], \
+            model_B_log[~preempting_mask], model_B_log[preempting_mask]
 
 def plot_job_arrival(model_A_log, model_B_log, model_A_name, model_B_name, save_dir):
     model_A_color = 'C0'
