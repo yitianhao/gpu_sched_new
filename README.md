@@ -41,14 +41,24 @@ project root directory.
 ### Create a configuration file
 The configuration file in Json format specifies which DNN models to run, job
 workload metadata, and some control knobs. 
-Take a look at [input.json](./gpu-sched-exp/gpu-tester/exp_configs/input.json)
-and check [configuration file format](./README.md).
+Take a look at [input.json](./gpu-sched-exp/gpu-tester/exp_configs/input.json).
 
 ### Run
-Run the following commands to run an example experiment.
+Run the following commands to run an experiment in which two fasterrcnn_resnet50_fpn
+run object detection jobs sharing one GPU without job preemption.
 ```
 cd gpu-sched-exp/gpu-tester  # python scripts have to be run under this dir
 python src/run_exp.py -f exp_configs/input.json
 ```
 
 ### Plot
+Run the following commands to plot the experiment results and an figure should
+be generated like the one blow.
+```
+cd gpu-sched-exp/gpu-tester
+python src/plot_jct_timeseries.py \
+ --model-A-jct-log logs/model_A.csv \
+ --model-B-jct-log logs/model_B.csv
+```
+
+![alt text](./img/jct_vs_t.jpg)
