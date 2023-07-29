@@ -29,7 +29,7 @@
 			"output_file_path": "./logs",
 			"output_file_name": "model_B",
 			"priority": 1,
-			"resize": false,
+			"resize": true,
 			"resize_size": [720, 1280],
 			"control": {
 				"control": false,
