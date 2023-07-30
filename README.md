@@ -8,7 +8,7 @@ try to install [miniconda](https://docs.conda.io/en/main/miniconda.html), which
 includes conda.
     ```
     cd gpu_sched_new
-    conda create env -f env.yml
+    conda env create -f env.yml
     ```
 - Once the conda virtual environment is set, replace `transform.py` file in 
 torchvision library in the virtual environment with `transform.py` in the 
