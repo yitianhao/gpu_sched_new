@@ -52,8 +52,8 @@ python src/run_exp.py -f exp_configs/input.json
 ```
 
 ### Plot
-Run the following commands to plot the experiment results and an figure should
-be generated like the one blow.
+Run the following commands to plot the experiment results and a figure named 
+'jct_vs_t.jpg' in current working directory should be generated like the one blow.
 ```
 cd gpu-sched-exp/gpu-tester
 python src/plot_jct_timeseries.py \
