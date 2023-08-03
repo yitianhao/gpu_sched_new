@@ -61,4 +61,14 @@ python src/plot_jct_timeseries.py \
  --model-B-jct-log logs/model_B.csv
 ```
 
+When model_A job runs alone on GPU, the average JCT is about 100-110ms. When
+model_B job runs alone on GPU, the average JCT is about 40-50ms. 
+The following figure plots the Job Completion Time (JCT) with respect to time.
+First observation is that model_A job JCT bumps up when a model_B job with
+higher priority arrives because two jobs are competing the hardware resources
+and leading to longer model_A JCT. Another observation is that average model_B
+JCT is much longer than its JCT when running alone on GPU. This happens because
+model_B job's GPU kernels only get executed after the queued model_A GPU
+kernels get executed.
+
 ![alt text](./img/jct_vs_t.jpg)
