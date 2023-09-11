@@ -72,3 +72,10 @@ model_B job's GPU kernels only get executed after the queued model_A GPU
 kernels get executed.
 
 ![alt text](./img/jct_vs_t.jpg)
+
+
+### Tradeoff between inference delays between preempted jobs and preemtping jobs
+
+```bash
+bash scripts/sweep_sync_example.sh
+```
